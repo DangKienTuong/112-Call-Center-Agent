@@ -84,22 +84,27 @@ function ChatPage() {
         context: messages
       });
 
+      // Backend returns {success: true, data: {...}}
+      // Axios wraps this in response.data
+      // So actual data is at response.data.data
+      const responseData = response.data.data;
+
       const operatorMessage = {
         role: 'operator',
-        message: response.data.response,
+        message: responseData.response,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, operatorMessage]);
 
       // Update ticket info
-      if (response.data.ticketInfo) {
-        setTicketInfo(response.data.ticketInfo);
+      if (responseData.ticketInfo) {
+        setTicketInfo(responseData.ticketInfo);
       }
 
       // Check if we should create a ticket
-      if (response.data.shouldCreateTicket && !currentTicket) {
-        handleCreateTicket(response.data.ticketInfo);
+      if (responseData.shouldCreateTicket && !currentTicket) {
+        handleCreateTicket(responseData.ticketInfo);
       }
     } catch (error) {
       console.error('Error processing message:', error);
@@ -116,13 +121,16 @@ function ChatPage() {
         sessionId
       });
 
-      setCurrentTicket(response.data);
-      toast.success(t('chat.ticketCreated', { id: response.data.ticketId }));
+      // Backend returns {success: true, data: {...}}
+      const ticketData = response.data.data || response.data;
+      
+      setCurrentTicket(ticketData);
+      toast.success(t('chat.ticketCreated', { id: ticketData.ticketId }));
 
       // Add system message
       setMessages(prev => [...prev, {
         role: 'system',
-        message: t('chat.ticketCreatedMessage', { id: response.data.ticketId }),
+        message: t('chat.ticketCreatedMessage', { id: ticketData.ticketId }),
         timestamp: new Date()
       }]);
     } catch (error) {

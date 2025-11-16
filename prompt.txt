@@ -109,13 +109,22 @@ Determine urgency level:
 
 ## OUTPUT FORMAT
 
-After collecting information, structure your response as:
+**CRITICAL: ONLY provide the JSON structure below when ALL of the following required information has been collected:**
+1. ✅ Complete location with street address AND city/district/ward
+2. ✅ Emergency type clearly identified
+3. ✅ Reporter's phone number (MANDATORY)
+4. ✅ Nearby landmarks or intersection information
+5. ✅ Number of people affected
+
+**DO NOT output JSON until ALL these fields are complete. Continue asking questions until you have everything.**
+
+Once ALL required information is collected, structure your final response as:
 
 ```json
 {
   "location": {
-    "address": "[Full address]",
-    "landmarks": "[Nearby landmarks]",
+    "address": "[Full address with city/district/ward]",
+    "landmarks": "[Nearby landmarks or intersections]",
     "coordinates": "[If provided]"
   },
   "emergencyType": "[MEDICAL|FIRE|SECURITY|RESCUE]",
@@ -123,7 +132,7 @@ After collecting information, structure your response as:
   "description": "[Brief description of incident]",
   "reporter": {
     "name": "[Caller name]",
-    "phone": "[Phone number]",
+    "phone": "[Phone number - REQUIRED]",
     "relationship": "[Witness|Victim|Other]"
   },
   "affectedPeople": {

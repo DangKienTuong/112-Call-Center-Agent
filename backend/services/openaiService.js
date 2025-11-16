@@ -5,9 +5,15 @@ require('dotenv').config();
 
 class OpenAIService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Only initialize OpenAI if API key is available
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    } else {
+      console.warn('OpenAI API key not configured. Service will use fallback responses.');
+      this.openai = null;
+    }
 
     this.systemPrompt = null;
     this.conversationHistory = new Map(); // Store conversation history per session
@@ -38,6 +44,12 @@ class OpenAIService {
   // Process a message using OpenAI
   async processMessage(message, sessionId, context = []) {
     try {
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === '') {
+        console.log('OpenAI API key not configured, using fallback response');
+        return this.fallbackResponse(message, context);
+      }
+
       // Get or create conversation history for this session
       if (!this.conversationHistory.has(sessionId)) {
         this.conversationHistory.set(sessionId, []);
@@ -47,7 +59,7 @@ class OpenAIService {
 
       // Build messages array for OpenAI
       const messages = [
-        { role: 'system', content: this.systemPrompt }
+        { role: 'system', content: this.systemPrompt || this.getDefaultPrompt() }
       ];
 
       // Add context from previous messages
@@ -95,6 +107,7 @@ class OpenAIService {
 
     } catch (error) {
       console.error('OpenAI API Error:', error);
+      console.error('Error details:', error.message);
 
       // Fallback to basic extraction if OpenAI fails
       return this.fallbackResponse(message, context);
@@ -157,9 +170,10 @@ class OpenAIService {
 
     // Extract location - search each message individually first
     const locationPatterns = [
-      /(\d+\s+[\w\s]+(?:street|road|avenue|st|rd|ave))/i,
-      /(\d+\s+[\w\s]+(?:đường|phố|quận))/i,
-      /(?:at|location|address|i'm at|we're at)\s*:?\s*([^,.]+(?:,\s*[^,.]+)*)/i
+      /(\d+\s+[\w\s]+(?:street|road|avenue|st|rd|ave)(?:,\s*[\w\s]+)*)/i,
+      /(\d+\s+[\w\s]+(?:đường|phố)(?:,\s*[\w\s]+)*)/i,
+      /(?:at|location|address|i'm at|we're at)\s*:?\s*([^.!?]+)/i,
+      /(?:located at|happening at|fire at|incident at)\s*:?\s*([^.!?]+)/i
     ];
 
     // Search messages individually to avoid concatenation issues
@@ -174,6 +188,45 @@ class OpenAIService {
         }
       }
       if (info.location) break;
+    }
+    
+    // Extract landmarks from conversation
+    const landmarkPatterns = [
+      /(?:near|next to|beside|opposite|behind|in front of)\s+([^,.!?]+)/i,
+      /(?:landmark|building|plaza|mall|market)\s*:?\s*([^,.!?]+)/i,
+      /(?:gần|đối diện|bên cạnh|phía sau)\s+([^,.!?]+)/i
+    ];
+    
+    for (const msg of messages) {
+      if (!info.landmarks && msg) {
+        for (const pattern of landmarkPatterns) {
+          const match = msg.match(pattern);
+          if (match) {
+            info.landmarks = match[1].trim();
+            break;
+          }
+        }
+      }
+      if (info.landmarks) break;
+    }
+    
+    // Extract city/district information
+    const locationDetailPatterns = [
+      /(?:city|district|ward|quận|phường|thành phố)\s*:?\s*([^,.!?]+)/i,
+      /,\s*([\w\s]+(?:city|district|ward|quận|phường|thành phố))/i
+    ];
+    
+    for (const msg of messages) {
+      for (const pattern of locationDetailPatterns) {
+        const match = msg.match(pattern);
+        if (match && info.location) {
+          // Append city/district to location if not already there
+          if (!info.location.toLowerCase().includes(match[1].toLowerCase())) {
+            info.location = `${info.location}, ${match[1].trim()}`;
+          }
+          break;
+        }
+      }
     }
 
     // Determine emergency type
@@ -235,10 +288,37 @@ class OpenAIService {
 
   // Check if we have enough information to create a ticket
   isTicketReady(info) {
+    // Require ALL critical information before creating ticket:
+    // 1. Location with city/district details (not just street address)
+    // 2. Emergency type clearly identified
+    // 3. Reporter's phone number (MANDATORY for callback)
+    // 4. Location must have city/district/ward information
+    
+    const hasLocation = info.location && info.location.length > 0;
+    const hasEmergencyType = info.emergencyType && info.emergencyType !== null;
+    const hasPhone = info.reporter.phone && info.reporter.phone.length > 0;
+    
+    // Check if location includes city/district information
+    // Location should have more than just street address
+    const locationHasDetails = hasLocation && (
+      info.location.toLowerCase().includes('city') ||
+      info.location.toLowerCase().includes('district') ||
+      info.location.toLowerCase().includes('ward') ||
+      info.location.toLowerCase().includes('quận') ||
+      info.location.toLowerCase().includes('phường') ||
+      info.location.toLowerCase().includes('thành phố') ||
+      // Or has nearby landmarks mentioned in response
+      info.landmarks ||
+      // Or location is detailed enough (contains comma separator indicating multiple parts)
+      (info.location.includes(',') && info.location.split(',').length >= 2)
+    );
+    
+    // All critical fields must be present
     return !!(
-      info.location &&
-      info.emergencyType &&
-      (info.reporter.phone || info.reporter.name)
+      hasLocation &&
+      locationHasDetails &&
+      hasEmergencyType &&
+      hasPhone
     );
   }
 

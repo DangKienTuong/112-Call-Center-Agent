@@ -50,11 +50,37 @@ exports.createTicketFromChat = async (req, res) => {
   try {
     const { ticketInfo, sessionId } = req.body;
 
-    // Validate required fields
+    // Validate required fields - must have complete information
     if (!ticketInfo || !ticketInfo.location || !ticketInfo.emergencyType) {
       return res.status(400).json({
         success: false,
         message: 'Incomplete ticket information. Location and emergency type are required.'
+      });
+    }
+    
+    // Validate phone number is provided (MANDATORY for emergency callback)
+    if (!ticketInfo.reporter || !ticketInfo.reporter.phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reporter phone number is required for emergency callback.'
+      });
+    }
+    
+    // Validate location has sufficient detail (city/district/ward or landmarks)
+    const hasLocationDetails = 
+      ticketInfo.location.toLowerCase().includes('city') ||
+      ticketInfo.location.toLowerCase().includes('district') ||
+      ticketInfo.location.toLowerCase().includes('ward') ||
+      ticketInfo.location.toLowerCase().includes('quận') ||
+      ticketInfo.location.toLowerCase().includes('phường') ||
+      ticketInfo.location.toLowerCase().includes('thành phố') ||
+      ticketInfo.landmarks ||
+      (ticketInfo.location.includes(',') && ticketInfo.location.split(',').length >= 2);
+    
+    if (!hasLocationDetails) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location must include city/district/ward information or nearby landmarks for accurate dispatch.'
       });
     }
 
