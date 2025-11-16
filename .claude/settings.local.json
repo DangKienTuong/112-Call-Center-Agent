@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node generate-jwt-secret.js)",
+      "Bash(del generate-jwt-secret.js)",
+      "Bash(npm run dev)",
+      "Bash(taskkill /F /IM node.exe /T 2)",
+      "Bash(nul)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5000)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /F /PID 15908 /T 2)",
+      "Bash(taskkill /F /PID 15976 /T 2)",
+      "Bash(taskkill /F /PID 15908)",
+      "Bash(powershell -Command \"Stop-Process -Id 15908,15976 -Force\" 2)",
+      "Bash(findstr LISTENING)",
+      "Bash(powershell -Command \"Stop-Process -Id 19228,16284 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Host ''Node processes cleaned up''\")",
+      "Bash(curl -s http://localhost:5000/api/health)",
+      "Bash(npm test)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Hello\"\",\"\"sessionId\"\":\"\"test123\"\",\"\"context\"\":[]}\" -v)",
+      "Bash(dir error.log 2)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Hello I need help\"\",\"\"sessionId\"\":\"\"test123\"\",\"\"context\"\":[]}\" -s)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Help! There is a fire at 123 Main Street!\"\",\"\"sessionId\"\":\"\"test123\"\",\"\"context\"\":[]}\" -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Help there is a fire at 123 Main Street\"\",\"\"sessionId\"\":\"\"test123\"\",\"\"context\"\":[]}\" -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"My phone number is 555-123-4567\"\",\"\"sessionId\"\":\"\"test123\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"Help there is a fire at 123 Main Street\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"I need your phone number\"\"}]}\" -s)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Help! There is a fire at 123 Main Street!\"\",\"\"sessionId\"\":\"\"test456\"\",\"\"context\"\":[]}\" -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"My phone number is 555-123-4567\"\",\"\"sessionId\"\":\"\"test456\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"Help! There is a fire at 123 Main Street!\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"Please provide your phone number so emergency services can contact you.\"\"}]}\" -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d '{\"\"\"\"message\"\"\"\":\"\"\"\"My phone number is 555-123-4567\"\"\"\",\"\"\"\"sessionId\"\"\"\":\"\"\"\"test456\"\"\"\",\"\"\"\"context\"\"\"\":[{\"\"\"\"role\"\"\"\":\"\"\"\"reporter\"\"\"\",\"\"\"\"message\"\"\"\":\"\"\"\"Help! There is a fire at 123 Main Street!\"\"\"\"},{\"\"\"\"role\"\"\"\":\"\"\"\"operator\"\"\"\",\"\"\"\"message\"\"\"\":\"\"\"\"Please provide your phone number so emergency services can contact you.\"\"\"\"}]}' -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"My phone number is 555-123-4567\"\",\"\"sessionId\"\":\"\"test456\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"Help there is a fire at 123 Main Street\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"Please provide your phone number\"\"}]}\" -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"There is fire at 456 Oak Avenue\"\",\"\"sessionId\"\":\"\"testnew\"\",\"\"context\"\":[]}\" -s)",
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Phone is 0901234567\"\",\"\"sessionId\"\":\"\"testnew\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"There is fire at 456 Oak Avenue\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"Please provide your phone number so emergency services can contact you.\"\"}]}\" -s)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

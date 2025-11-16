@@ -1,0 +1,109 @@
+{
+  "app": {
+    "title": "Tổng Đài Khẩn Cấp 112",
+    "subtitle": "Hệ thống tiếp nhận và xử lý cuộc gọi khẩn cấp quốc gia"
+  },
+  "chat": {
+    "title": "Tổng Đài Khẩn Cấp 112",
+    "subtitle": "Hỗ trợ khẩn cấp 24/7",
+    "welcome": "Xin chào! Tôi là tổng đài viên khẩn cấp 112. Tôi sẽ hỗ trợ bạn trong tình huống khẩn cấp. Vui lòng mô tả tình huống của bạn và cung cấp địa chỉ chính xác.",
+    "inputPlaceholder": "Nhập tin nhắn của bạn...",
+    "send": "Gửi",
+    "processing": "Đang xử lý...",
+    "collectingInfo": "Thu thập thông tin",
+    "ticketCreated": "Đã tạo phiếu khẩn cấp: {{id}}",
+    "ticketCreatedMessage": "Phiếu khẩn cấp {{id}} đã được tạo thành công. Đội cứu hộ sẽ được điều động ngay lập tức.",
+    "errorProcessing": "Lỗi khi xử lý tin nhắn",
+    "errorCreatingTicket": "Lỗi khi tạo phiếu khẩn cấp",
+    "errorDownloading": "Lỗi khi tải xuống phiếu",
+    "instructions": "Hướng dẫn",
+    "instruction1": "Hãy bình tĩnh và cung cấp thông tin rõ ràng",
+    "instruction2": "Ưu tiên cung cấp địa chỉ chính xác",
+    "instruction3": "Trong trường hợp nguy hiểm, hãy báo ngay lập tức"
+  },
+  "ticket": {
+    "title": "Phiếu Khẩn Cấp",
+    "location": "Địa điểm",
+    "reporter": "Người báo",
+    "phone": "Số điện thoại",
+    "affected": "Người bị ảnh hưởng",
+    "people": "người",
+    "requiredSupport": "Hỗ trợ cần thiết",
+    "description": "Mô tả tình huống",
+    "downloadPDF": "Tải xuống PDF",
+    "status": {
+      "URGENT": "Khẩn cấp",
+      "IN_PROGRESS": "Đang xử lý",
+      "RESOLVED": "Đã giải quyết",
+      "CANCELLED": "Đã hủy"
+    },
+    "priority": {
+      "CRITICAL": "Cực kỳ khẩn",
+      "HIGH": "Cao",
+      "MEDIUM": "Trung bình",
+      "LOW": "Thấp"
+    },
+    "type": {
+      "SECURITY": "An ninh",
+      "FIRE": "Cháy nổ",
+      "MEDICAL": "Y tế",
+      "RESCUE": "Cứu hộ",
+      "OTHER": "Khác"
+    }
+  },
+  "support": {
+    "police": "Công an",
+    "ambulance": "Cấp cứu",
+    "fire": "Cứu hỏa",
+    "rescue": "Cứu hộ"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "register": "Đăng ký",
+    "username": "Tên đăng nhập",
+    "password": "Mật khẩu",
+    "email": "Email",
+    "fullName": "Họ và tên",
+    "role": "Vai trò",
+    "loginSuccess": "Đăng nhập thành công",
+    "loginFailed": "Đăng nhập thất bại",
+    "registerSuccess": "Đăng ký thành công",
+    "registerFailed": "Đăng ký thất bại"
+  },
+  "dashboard": {
+    "title": "Bảng điều khiển",
+    "totalTickets": "Tổng số phiếu",
+    "urgentTickets": "Phiếu khẩn cấp",
+    "resolvedTickets": "Đã giải quyết",
+    "inProgressTickets": "Đang xử lý",
+    "statistics": "Thống kê",
+    "recentTickets": "Phiếu gần đây",
+    "byType": "Theo loại",
+    "byPriority": "Theo độ ưu tiên"
+  },
+  "navigation": {
+    "chat": "Tổng đài",
+    "dashboard": "Bảng điều khiển",
+    "tickets": "Phiếu khẩn cấp",
+    "settings": "Cài đặt",
+    "profile": "Hồ sơ"
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "view": "Xem",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "export": "Xuất",
+    "import": "Nhập",
+    "actions": "Hành động",
+    "noData": "Không có dữ liệu"
+  }
+}

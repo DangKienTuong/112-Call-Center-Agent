@@ -1,0 +1,109 @@
+{
+  "app": {
+    "title": "112 Emergency Call Center",
+    "subtitle": "National Emergency Call Reception and Processing System"
+  },
+  "chat": {
+    "title": "112 Emergency Hotline",
+    "subtitle": "24/7 Emergency Support",
+    "welcome": "Hello! I am an emergency operator from hotline 112. I will assist you in your emergency situation. Please describe your situation and provide your exact address.",
+    "inputPlaceholder": "Type your message...",
+    "send": "Send",
+    "processing": "Processing...",
+    "collectingInfo": "Collecting Information",
+    "ticketCreated": "Emergency ticket created: {{id}}",
+    "ticketCreatedMessage": "Emergency ticket {{id}} has been created successfully. Response teams will be dispatched immediately.",
+    "errorProcessing": "Error processing message",
+    "errorCreatingTicket": "Error creating emergency ticket",
+    "errorDownloading": "Error downloading ticket",
+    "instructions": "Instructions",
+    "instruction1": "Stay calm and provide clear information",
+    "instruction2": "Priority: provide exact address",
+    "instruction3": "In case of danger, report immediately"
+  },
+  "ticket": {
+    "title": "Emergency Ticket",
+    "location": "Location",
+    "reporter": "Reporter",
+    "phone": "Phone Number",
+    "affected": "Affected People",
+    "people": "people",
+    "requiredSupport": "Required Support",
+    "description": "Situation Description",
+    "downloadPDF": "Download PDF",
+    "status": {
+      "URGENT": "Urgent",
+      "IN_PROGRESS": "In Progress",
+      "RESOLVED": "Resolved",
+      "CANCELLED": "Cancelled"
+    },
+    "priority": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low"
+    },
+    "type": {
+      "SECURITY": "Security",
+      "FIRE": "Fire",
+      "MEDICAL": "Medical",
+      "RESCUE": "Rescue",
+      "OTHER": "Other"
+    }
+  },
+  "support": {
+    "police": "Police",
+    "ambulance": "Ambulance",
+    "fire": "Fire Department",
+    "rescue": "Rescue Team"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "email": "Email",
+    "fullName": "Full Name",
+    "role": "Role",
+    "loginSuccess": "Login successful",
+    "loginFailed": "Login failed",
+    "registerSuccess": "Registration successful",
+    "registerFailed": "Registration failed"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalTickets": "Total Tickets",
+    "urgentTickets": "Urgent Tickets",
+    "resolvedTickets": "Resolved",
+    "inProgressTickets": "In Progress",
+    "statistics": "Statistics",
+    "recentTickets": "Recent Tickets",
+    "byType": "By Type",
+    "byPriority": "By Priority"
+  },
+  "navigation": {
+    "chat": "Call Center",
+    "dashboard": "Dashboard",
+    "tickets": "Emergency Tickets",
+    "settings": "Settings",
+    "profile": "Profile"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "actions": "Actions",
+    "noData": "No data"
+  }
+}
