@@ -71,14 +71,35 @@ function MessageBubble({ message }) {
           }}
         >
           <Typography
+            component="div"
             variant="body1"
             sx={{
               whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
+              '& strong': {
+                fontWeight: 'bold',
+                color: isSystem ? '#ff6b35' : 'inherit'
+              },
+              '& ul, & ol': {
+                paddingLeft: '20px',
+                marginTop: '8px',
+                marginBottom: '8px'
+              },
+              '& li': {
+                marginBottom: '4px'
+              }
             }}
-          >
-            {message.message}
-          </Typography>
+            dangerouslySetInnerHTML={{
+              __html: message.message
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/•/g, '<li>')
+                .replace(/\n/g, '<br/>')
+                .replace(/<li>/g, '</li><li>')
+                .replace(/^<\/li>/, '')
+                .replace(/<li>(.*?)<br\/>/g, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
+            }}
+          />
           <Typography
             variant="caption"
             color="textSecondary"

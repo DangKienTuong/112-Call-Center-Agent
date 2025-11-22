@@ -330,13 +330,13 @@ class OpenAIService {
     let response = '';
 
     if (!ticketInfo.location) {
-      response = "I need your exact location to send help. Please provide your full address including street name and number.";
+      response = "Tôi cần địa chỉ chính xác của bạn để gửi trợ giúp. Vui lòng cung cấp địa chỉ đầy đủ bao gồm số nhà và tên đường.";
     } else if (!ticketInfo.emergencyType) {
-      response = "What type of emergency is this? Is someone injured, is there a fire, or is this a security issue?";
+      response = "Đây là loại tình huống khẩn cấp nào? Có người bị thương, có cháy nổ hay đây là vấn đề an ninh?";
     } else if (!ticketInfo.reporter.phone) {
-      response = "Please provide your phone number so emergency services can contact you.";
+      response = "Vui lòng cung cấp số điện thoại để lực lượng cứu hộ có thể liên hệ với bạn.";
     } else {
-      response = `I have your information. Help is being dispatched to ${ticketInfo.location}. Please stay on the line.`;
+      response = `Tôi đã ghi nhận thông tin của bạn. Lực lượng cứu hộ đang được điều động đến ${ticketInfo.location}. Vui lòng giữ liên lạc.`;
     }
 
     return {

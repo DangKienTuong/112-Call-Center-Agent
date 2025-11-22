@@ -127,10 +127,10 @@ function ChatPage() {
       setCurrentTicket(ticketData);
       toast.success(t('chat.ticketCreated', { id: ticketData.ticketId }));
 
-      // Add system message
+      // Add system message from backend (with better formatting)
       setMessages(prev => [...prev, {
         role: 'system',
-        message: t('chat.ticketCreatedMessage', { id: ticketData.ticketId }),
+        message: ticketData.message || t('chat.ticketCreatedMessage', { id: ticketData.ticketId }),
         timestamp: new Date()
       }]);
     } catch (error) {
