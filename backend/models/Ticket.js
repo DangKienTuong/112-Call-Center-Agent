@@ -150,13 +150,14 @@ ticketSchema.index({ emergencyType: 1 });
 ticketSchema.index({ createdAt: -1 });
 ticketSchema.index({ 'location.district': 1, 'location.city': 1 });
 
-// Generate ticket ID
+// Generate ticket ID with random suffix to ensure uniqueness
 ticketSchema.pre('save', async function(next) {
   if (!this.ticketId) {
     const now = new Date();
-    const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '');
-    const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
-    this.ticketId = `TD-${dateStr}-${timeStr}`;
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timeStr = now.toISOString().slice(11, 19).replace(/:/g, '');
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    this.ticketId = `TD-${dateStr}-${timeStr}-${randomSuffix}`;
   }
   next();
 });

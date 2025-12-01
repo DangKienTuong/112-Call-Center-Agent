@@ -17,6 +17,7 @@ class OpenAIService {
 
     this.systemPrompt = null;
     this.conversationHistory = new Map(); // Store conversation history per session
+    this.collectedInfo = new Map(); // Store collected ticket info per session
     this.initializePrompt();
   }
 
@@ -34,28 +35,80 @@ class OpenAIService {
 
   // Default prompt as fallback
   getDefaultPrompt() {
-    return `You are a professional emergency 112 hotline operator.
-    Your role is to receive and process emergency reports.
-    ALWAYS prioritize obtaining the caller's EXACT LOCATION first.
-    Remain calm, professional, and empathetic.
-    Extract information efficiently and provide appropriate emergency guidance.`;
+    return `Bạn là tổng đài viên AI của đường dây nóng khẩn cấp 112 Việt Nam.
+    Thu thập NHANH 4 thông tin bắt buộc:
+    1. Địa chỉ đầy đủ (số nhà, đường, quận/huyện, thành phố)
+    2. Loại tình huống (FIRE_RESCUE/MEDICAL/SECURITY)
+    3. Số điện thoại liên hệ
+    4. Số người bị ảnh hưởng
+
+    Hỏi từng thông tin một. Khi đủ thông tin, tạo JSON.
+    LUÔN trả lời bằng TIẾNG VIỆT.`;
+  }
+
+  // Get or initialize session info
+  getSessionInfo(sessionId) {
+    if (!this.collectedInfo.has(sessionId)) {
+      this.collectedInfo.set(sessionId, {
+        location: null,
+        locationDetails: {
+          address: null,
+          ward: null,
+          district: null,
+          city: null,
+          landmarks: null
+        },
+        emergencyType: null,
+        description: null,
+        reporter: {
+          name: null,
+          phone: null
+        },
+        affectedPeople: {
+          total: 0,
+          injured: 0,
+          critical: 0
+        },
+        supportRequired: {
+          police: false,
+          ambulance: false,
+          fireDepartment: false,
+          rescue: false
+        },
+        priority: 'HIGH'
+      });
+    }
+    return this.collectedInfo.get(sessionId);
   }
 
   // Process a message using OpenAI
   async processMessage(message, sessionId, context = []) {
     try {
+      // Get accumulated info for this session
+      const sessionInfo = this.getSessionInfo(sessionId);
+
+      // Extract info from current message FIRST
+      this.extractInfoFromMessage(message, sessionInfo);
+
+      // Also extract from context if available
+      if (context && context.length > 0) {
+        context.forEach(msg => {
+          if (msg.role === 'reporter') {
+            this.extractInfoFromMessage(msg.message, sessionInfo);
+          }
+        });
+      }
+
       // Check if OpenAI API key is configured
       if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === '') {
         console.log('OpenAI API key not configured, using fallback response');
-        return this.fallbackResponse(message, context);
+        return this.fallbackResponse(message, sessionInfo, sessionId);
       }
 
       // Get or create conversation history for this session
       if (!this.conversationHistory.has(sessionId)) {
         this.conversationHistory.set(sessionId, []);
       }
-
-      const sessionHistory = this.conversationHistory.get(sessionId);
 
       // Build messages array for OpenAI
       const messages = [
@@ -72,283 +125,345 @@ class OpenAIService {
         });
       }
 
+      // Add info about what we've already collected
+      const collectedSummary = this.getCollectedSummary(sessionInfo);
+      if (collectedSummary) {
+        messages.push({
+          role: 'system',
+          content: `Thông tin đã thu thập: ${collectedSummary}. Chỉ hỏi những thông tin còn thiếu.`
+        });
+      }
+
       // Add current message
       messages.push({ role: 'user', content: message });
 
       // Call OpenAI API
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview', // Note: GPT-5 doesn't exist yet, using GPT-4 Turbo
+        model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
         messages: messages,
-        temperature: 0.3, // Lower temperature for more consistent emergency responses
+        temperature: 0.3,
         max_tokens: 500,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1,
       });
 
       const aiResponse = completion.choices[0].message.content;
 
-      // Update conversation history
-      sessionHistory.push({ role: 'user', content: message });
-      sessionHistory.push({ role: 'assistant', content: aiResponse });
-
-      // Keep only last 20 messages to avoid token limits
-      if (sessionHistory.length > 20) {
-        sessionHistory.splice(0, sessionHistory.length - 20);
+      // Try to extract JSON from AI response
+      const jsonData = this.extractJsonFromResponse(aiResponse);
+      if (jsonData) {
+        // Merge AI-provided JSON with our extracted data
+        this.mergeJsonData(sessionInfo, jsonData);
       }
 
-      // Extract structured information from the response
-      const ticketInfo = this.extractTicketInfo(aiResponse, context, message);
+      // Check if ticket is ready
+      const isReady = this.isTicketReady(sessionInfo);
+
+      // Build final ticket info for response
+      const ticketInfo = this.buildTicketInfo(sessionInfo);
 
       return {
         response: aiResponse,
         ticketInfo: ticketInfo,
-        shouldCreateTicket: this.isTicketReady(ticketInfo)
+        shouldCreateTicket: isReady
       };
 
     } catch (error) {
       console.error('OpenAI API Error:', error);
-      console.error('Error details:', error.message);
-
-      // Fallback to basic extraction if OpenAI fails
-      return this.fallbackResponse(message, context);
+      const sessionInfo = this.getSessionInfo(sessionId);
+      return this.fallbackResponse(message, sessionInfo, sessionId);
     }
   }
 
-  // Extract ticket information from AI response and conversation
-  extractTicketInfo(aiResponse, context, userMessage) {
-    const info = {
-      location: null,
-      emergencyType: null,
-      severity: 'URGENT',
-      description: null,
-      reporter: {
-        name: null,
-        phone: null,
-        relationship: null
-      },
-      affectedPeople: {
-        total: 0,
-        injured: 0,
-        status: null
-      },
-      supportRequired: {
-        police: false,
-        ambulance: false,
-        fireDepartment: false,
-        rescue: false
-      },
-      additionalInfo: null
-    };
+  // Extract information from a single message
+  extractInfoFromMessage(message, info) {
+    if (!message) return;
 
-    // Build messages array properly
-    const messages = [];
-    if (context && context.length > 0) {
-      context.forEach(msg => messages.push(msg.message));
-    }
-    if (userMessage) {
-      messages.push(userMessage);
-    }
-    if (aiResponse) {
-      messages.push(aiResponse);
-    }
+    const lowerMessage = message.toLowerCase();
 
-    const allMessages = messages.join(' ');
-
-    // Try to extract JSON if AI provided structured data
-    const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[1]);
-        return { ...info, ...parsed };
-      } catch (e) {
-        console.log('Could not parse JSON from AI response');
-      }
-    }
-
-    // Manual extraction from conversation
-    const lowerText = allMessages.toLowerCase();
-
-    // Extract location - search each message individually first
-    const locationPatterns = [
-      /(\d+\s+[\w\s]+(?:street|road|avenue|st|rd|ave)(?:,\s*[\w\s]+)*)/i,
-      /(\d+\s+[\w\s]+(?:đường|phố)(?:,\s*[\w\s]+)*)/i,
-      /(?:at|location|address|i'm at|we're at)\s*:?\s*([^.!?]+)/i,
-      /(?:located at|happening at|fire at|incident at)\s*:?\s*([^.!?]+)/i
-    ];
-
-    // Search messages individually to avoid concatenation issues
-    for (const msg of messages) {
-      if (!info.location && msg) {
-        for (const pattern of locationPatterns) {
-          const match = msg.match(pattern);
-          if (match) {
-            info.location = match[1].trim();
-            break;
-          }
-        }
-      }
-      if (info.location) break;
-    }
-    
-    // Extract landmarks from conversation
-    const landmarkPatterns = [
-      /(?:near|next to|beside|opposite|behind|in front of)\s+([^,.!?]+)/i,
-      /(?:landmark|building|plaza|mall|market)\s*:?\s*([^,.!?]+)/i,
-      /(?:gần|đối diện|bên cạnh|phía sau)\s+([^,.!?]+)/i
-    ];
-    
-    for (const msg of messages) {
-      if (!info.landmarks && msg) {
-        for (const pattern of landmarkPatterns) {
-          const match = msg.match(pattern);
-          if (match) {
-            info.landmarks = match[1].trim();
-            break;
-          }
-        }
-      }
-      if (info.landmarks) break;
-    }
-    
-    // Extract city/district information
-    const locationDetailPatterns = [
-      /(?:city|district|ward|quận|phường|thành phố)\s*:?\s*([^,.!?]+)/i,
-      /,\s*([\w\s]+(?:city|district|ward|quận|phường|thành phố))/i
-    ];
-    
-    for (const msg of messages) {
-      for (const pattern of locationDetailPatterns) {
-        const match = msg.match(pattern);
-        if (match && info.location) {
-          // Append city/district to location if not already there
-          if (!info.location.toLowerCase().includes(match[1].toLowerCase())) {
-            info.location = `${info.location}, ${match[1].trim()}`;
-          }
-          break;
-        }
-      }
-    }
-
-    // Determine emergency type
-    if (/fire|cháy|smoke|khói|burn/i.test(lowerText)) {
-      info.emergencyType = 'FIRE';
-      info.supportRequired.fireDepartment = true;
-    } else if (/medical|injured|hurt|sick|accident|tai nạn|bị thương|ambulance/i.test(lowerText)) {
-      info.emergencyType = 'MEDICAL';
-      info.supportRequired.ambulance = true;
-    } else if (/crime|robbery|theft|assault|attack|cướp|trộm|tấn công|police/i.test(lowerText)) {
-      info.emergencyType = 'SECURITY';
-      info.supportRequired.police = true;
-    } else if (/rescue|trapped|stuck|flood|collapse|cứu|mắc kẹt|sập/i.test(lowerText)) {
-      info.emergencyType = 'RESCUE';
-      info.supportRequired.rescue = true;
-    }
-
-    // Determine severity
-    if (/critical|dying|unconscious|not breathing|severe|nghiêm trọng/i.test(lowerText)) {
-      info.severity = 'CRITICAL';
-    } else if (/urgent|serious|bad|immediately/i.test(lowerText)) {
-      info.severity = 'URGENT';
-    } else {
-      info.severity = 'MODERATE';
-    }
-
-    // Extract phone number
+    // Extract phone number (Vietnamese format)
     const phonePatterns = [
-      /(?:0|\+84)[0-9]{9,10}/,
-      /\d{3}[-.]?\d{3}[-.]?\d{4}/,
-      /(?:phone|số điện thoại|contact)\s*:?\s*([\d\s\-\.]+)/i
+      /(?:0|\+84)(?:\d{9,10})/g,
+      /\b\d{4}[-.\s]?\d{3}[-.\s]?\d{3}\b/g,
+      /\b\d{3}[-.\s]?\d{4}[-.\s]?\d{3}\b/g
     ];
 
     for (const pattern of phonePatterns) {
-      const match = allMessages.match(pattern);
+      const match = message.match(pattern);
       if (match) {
-        info.reporter.phone = match[0].replace(/[\s\-\.]/g, '');
+        info.reporter.phone = match[0].replace(/[-.\s]/g, '');
         break;
       }
     }
 
     // Extract name
-    const nameMatch = allMessages.match(/(?:name is|my name|tên|i am)\s*:?\s*([A-Za-zÀ-ỹ\s]+)/i);
-    if (nameMatch) {
-      info.reporter.name = nameMatch[1].trim();
+    const namePatterns = [
+      /(?:tên(?:\s+là)?|tôi là|mình là|tên tôi là)\s*:?\s*([A-Za-zÀ-ỹ\s]{2,30})/i,
+      /(?:name(?:\s+is)?|i am|i'm)\s*:?\s*([A-Za-zÀ-ỹ\s]{2,30})/i
+    ];
+
+    for (const pattern of namePatterns) {
+      const match = message.match(pattern);
+      if (match && !info.reporter.name) {
+        info.reporter.name = match[1].trim();
+        break;
+      }
     }
 
-    // Extract people count
-    const peopleMatch = allMessages.match(/(\d+)\s*(?:people|person|người|victims|nạn nhân)/i);
-    if (peopleMatch) {
-      info.affectedPeople.total = parseInt(peopleMatch[1]);
+    // Extract location - Vietnamese addresses
+    const addressPatterns = [
+      // Full address with number
+      /(\d+[A-Za-z]?\s*(?:\/\d+)?)\s*(đường|phố|ngõ|hẻm|ngách)?\s*([A-Za-zÀ-ỹ\s\d]+?)(?:,|$)/i,
+      // Street names
+      /(đường|phố)\s+([A-Za-zÀ-ỹ\s\d]+?)(?:,|\s+(?:phường|quận|huyện|thành phố|tp\.))/i
+    ];
+
+    for (const pattern of addressPatterns) {
+      const match = message.match(pattern);
+      if (match && !info.locationDetails.address) {
+        info.locationDetails.address = match[0].replace(/,\s*$/, '').trim();
+        break;
+      }
     }
 
-    // Set description
-    info.description = userMessage;
+    // Extract district (Quận/Huyện)
+    const districtMatch = message.match(/(?:quận|huyện|q\.?)\s*(\d+|[A-Za-zÀ-ỹ\s]+?)(?:,|$|\s+(?:thành phố|tp\.|tỉnh))/i);
+    if (districtMatch) {
+      info.locationDetails.district = districtMatch[0].replace(/,\s*$/, '').trim();
+    }
 
-    return info;
+    // Extract ward (Phường/Xã)
+    const wardMatch = message.match(/(?:phường|xã|p\.?)\s*(\d+|[A-Za-zÀ-ỹ\s]+?)(?:,|$|\s+(?:quận|huyện))/i);
+    if (wardMatch) {
+      info.locationDetails.ward = wardMatch[0].replace(/,\s*$/, '').trim();
+    }
+
+    // Extract city
+    const cityPatterns = [
+      /(?:thành phố|tp\.?|tỉnh)\s*([A-Za-zÀ-ỹ\s]+?)(?:,|$)/i,
+      /(hà nội|hồ chí minh|đà nẵng|hải phòng|cần thơ)/i
+    ];
+
+    for (const pattern of cityPatterns) {
+      const match = message.match(pattern);
+      if (match) {
+        info.locationDetails.city = match[1] ? match[1].trim() : match[0].trim();
+        break;
+      }
+    }
+
+    // Build full location string
+    const locationParts = [
+      info.locationDetails.address,
+      info.locationDetails.ward,
+      info.locationDetails.district,
+      info.locationDetails.city
+    ].filter(Boolean);
+
+    if (locationParts.length > 0) {
+      info.location = locationParts.join(', ');
+    }
+
+    // Extract emergency type from keywords
+    if (/cháy|lửa|khói|nổ|gas|bốc cháy/i.test(lowerMessage)) {
+      info.emergencyType = 'FIRE_RESCUE';
+      info.supportRequired.fireDepartment = true;
+      info.supportRequired.rescue = true;
+    } else if (/sập|đổ|kẹt|mắc kẹt|ngập|đuối nước|chìm/i.test(lowerMessage)) {
+      info.emergencyType = 'FIRE_RESCUE';
+      info.supportRequired.rescue = true;
+    } else if (/tai nạn|đâm|va chạm|xe|chảy máu|gãy|bị thương/i.test(lowerMessage)) {
+      info.emergencyType = 'MEDICAL';
+      info.supportRequired.ambulance = true;
+    } else if (/bệnh|đau|bất tỉnh|ngất|khó thở|đột quỵ|nhồi máu/i.test(lowerMessage)) {
+      info.emergencyType = 'MEDICAL';
+      info.supportRequired.ambulance = true;
+    } else if (/cướp|trộm|đánh|đánh nhau|côn đồ|bạo lực|xô xát/i.test(lowerMessage)) {
+      info.emergencyType = 'SECURITY';
+      info.supportRequired.police = true;
+    }
+
+    // Extract number of people
+    const peoplePatterns = [
+      /(\d+)\s*(?:người|nạn nhân|victim)/i,
+      /(?:có|khoảng|chừng|tầm)\s*(\d+)\s*(?:người|nạn nhân)/i
+    ];
+
+    for (const pattern of peoplePatterns) {
+      const match = message.match(pattern);
+      if (match) {
+        info.affectedPeople.total = parseInt(match[1]) || 0;
+        break;
+      }
+    }
+
+    // Extract injured count
+    const injuredMatch = message.match(/(\d+)\s*(?:người)?\s*(?:bị thương|bị bỏng|injured)/i);
+    if (injuredMatch) {
+      info.affectedPeople.injured = parseInt(injuredMatch[1]) || 0;
+    }
+
+    // Extract critical count
+    const criticalMatch = message.match(/(\d+)\s*(?:người)?\s*(?:nguy kịch|nặng|critical|serious)/i);
+    if (criticalMatch) {
+      info.affectedPeople.critical = parseInt(criticalMatch[1]) || 0;
+    }
+
+    // Determine priority
+    if (/chết|tử vong|nguy kịch|bất tỉnh|không thở|đang cháy lớn/i.test(lowerMessage)) {
+      info.priority = 'CRITICAL';
+    } else if (/nặng|nghiêm trọng|khẩn cấp|gấp/i.test(lowerMessage)) {
+      info.priority = 'HIGH';
+    }
+
+    // Store description
+    if (!info.description && message.length > 10) {
+      info.description = message.substring(0, 200);
+    }
+  }
+
+  // Extract JSON from AI response
+  extractJsonFromResponse(response) {
+    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[1]);
+      } catch (e) {
+        console.log('Could not parse JSON from AI response');
+      }
+    }
+    return null;
+  }
+
+  // Merge JSON data from AI response
+  mergeJsonData(info, jsonData) {
+    if (jsonData.location) {
+      info.location = jsonData.location;
+    }
+    if (jsonData.emergencyType) {
+      info.emergencyType = jsonData.emergencyType;
+    }
+    if (jsonData.description) {
+      info.description = jsonData.description;
+    }
+    if (jsonData.reporter) {
+      if (jsonData.reporter.name) info.reporter.name = jsonData.reporter.name;
+      if (jsonData.reporter.phone) info.reporter.phone = jsonData.reporter.phone;
+    }
+    if (jsonData.affectedPeople) {
+      if (jsonData.affectedPeople.total) info.affectedPeople.total = jsonData.affectedPeople.total;
+      if (jsonData.affectedPeople.injured) info.affectedPeople.injured = jsonData.affectedPeople.injured;
+      if (jsonData.affectedPeople.critical) info.affectedPeople.critical = jsonData.affectedPeople.critical;
+    }
+    if (jsonData.supportRequired) {
+      Object.assign(info.supportRequired, jsonData.supportRequired);
+    }
+    if (jsonData.priority) {
+      info.priority = jsonData.priority;
+    }
+  }
+
+  // Get summary of collected info
+  getCollectedSummary(info) {
+    const parts = [];
+    if (info.location) parts.push(`Địa chỉ: ${info.location}`);
+    if (info.emergencyType) parts.push(`Loại: ${info.emergencyType}`);
+    if (info.reporter.phone) parts.push(`SĐT: ${info.reporter.phone}`);
+    if (info.affectedPeople.total > 0) parts.push(`Số người: ${info.affectedPeople.total}`);
+    return parts.join(', ');
   }
 
   // Check if we have enough information to create a ticket
   isTicketReady(info) {
-    // Require ALL critical information before creating ticket:
-    // 1. Location with city/district details (not just street address)
-    // 2. Emergency type clearly identified
-    // 3. Reporter's phone number (MANDATORY for callback)
-    // 4. Location must have city/district/ward information
-    
-    const hasLocation = info.location && info.location.length > 0;
-    const hasEmergencyType = info.emergencyType && info.emergencyType !== null;
-    const hasPhone = info.reporter.phone && info.reporter.phone.length > 0;
-    
-    // Check if location includes city/district information
-    // Location should have more than just street address
-    const locationHasDetails = hasLocation && (
-      info.location.toLowerCase().includes('city') ||
-      info.location.toLowerCase().includes('district') ||
-      info.location.toLowerCase().includes('ward') ||
+    // Must have location with district/city
+    const hasValidLocation = info.location && (
       info.location.toLowerCase().includes('quận') ||
+      info.location.toLowerCase().includes('huyện') ||
       info.location.toLowerCase().includes('phường') ||
       info.location.toLowerCase().includes('thành phố') ||
-      // Or has nearby landmarks mentioned in response
-      info.landmarks ||
-      // Or location is detailed enough (contains comma separator indicating multiple parts)
-      (info.location.includes(',') && info.location.split(',').length >= 2)
+      info.location.toLowerCase().includes('tp.') ||
+      info.location.toLowerCase().includes('district') ||
+      info.location.toLowerCase().includes('ward') ||
+      info.location.includes(',') // Has multiple parts
     );
-    
-    // All critical fields must be present
-    return !!(
-      hasLocation &&
-      locationHasDetails &&
-      hasEmergencyType &&
-      hasPhone
-    );
+
+    // Must have emergency type
+    const hasEmergencyType = info.emergencyType &&
+      ['FIRE_RESCUE', 'MEDICAL', 'SECURITY'].includes(info.emergencyType);
+
+    // Must have phone number
+    const hasPhone = info.reporter.phone && info.reporter.phone.length >= 9;
+
+    // Must have some info about affected people (at least we know there's someone)
+    const hasAffectedInfo = info.affectedPeople.total > 0 || info.description;
+
+    return !!(hasValidLocation && hasEmergencyType && hasPhone && hasAffectedInfo);
+  }
+
+  // Build ticket info object for response
+  buildTicketInfo(info) {
+    return {
+      location: info.location,
+      landmarks: info.locationDetails.landmarks,
+      emergencyType: info.emergencyType,
+      description: info.description,
+      reporter: {
+        name: info.reporter.name,
+        phone: info.reporter.phone
+      },
+      affectedPeople: {
+        total: info.affectedPeople.total || 1,
+        injured: info.affectedPeople.injured,
+        critical: info.affectedPeople.critical
+      },
+      supportRequired: info.supportRequired,
+      priority: info.priority
+    };
   }
 
   // Fallback response when OpenAI is unavailable
-  fallbackResponse(message, context) {
-    // Build proper context array for extraction
-    const fullContext = context || [];
-    const ticketInfo = this.extractTicketInfo('', fullContext, message);
-    let response = '';
+  fallbackResponse(message, info, sessionId) {
+    // Extract info from current message
+    this.extractInfoFromMessage(message, info);
 
-    if (!ticketInfo.location) {
-      response = "Tôi cần địa chỉ chính xác của bạn để gửi trợ giúp. Vui lòng cung cấp địa chỉ đầy đủ bao gồm số nhà và tên đường.";
-    } else if (!ticketInfo.emergencyType) {
-      response = "Đây là loại tình huống khẩn cấp nào? Có người bị thương, có cháy nổ hay đây là vấn đề an ninh?";
-    } else if (!ticketInfo.reporter.phone) {
-      response = "Vui lòng cung cấp số điện thoại để lực lượng cứu hộ có thể liên hệ với bạn.";
+    let response = '';
+    const missingInfo = [];
+
+    // Check what's missing and ask for it
+    if (!info.location || !info.locationDetails.district) {
+      response = 'Bạn đang ở đâu? Cho tôi địa chỉ chính xác (số nhà, tên đường, quận/huyện, thành phố).';
+      missingInfo.push('location');
+    } else if (!info.emergencyType) {
+      response = 'Chuyện gì đang xảy ra? Có cháy, tai nạn, hay cần công an?';
+      missingInfo.push('emergencyType');
+    } else if (!info.reporter.phone) {
+      response = 'Số điện thoại của bạn là gì để lực lượng cứu hộ liên hệ?';
+      missingInfo.push('phone');
+    } else if (info.affectedPeople.total === 0) {
+      response = 'Có bao nhiêu người cần trợ giúp? Có ai bị thương không?';
+      missingInfo.push('affectedPeople');
     } else {
-      response = `Tôi đã ghi nhận thông tin của bạn. Lực lượng cứu hộ đang được điều động đến ${ticketInfo.location}. Vui lòng giữ liên lạc.`;
+      // All info collected
+      const emergencyTypeVi = {
+        'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
+        'MEDICAL': 'Cấp cứu y tế',
+        'SECURITY': 'An ninh'
+      };
+      response = `Đã ghi nhận thông tin. Lực lượng ${emergencyTypeVi[info.emergencyType] || info.emergencyType} đang được điều động đến ${info.location}!`;
     }
+
+    const ticketInfo = this.buildTicketInfo(info);
+    const isReady = this.isTicketReady(info);
 
     return {
       response: response,
       ticketInfo: ticketInfo,
-      shouldCreateTicket: this.isTicketReady(ticketInfo)
+      shouldCreateTicket: isReady
     };
   }
 
   // Clear conversation history for a session
   clearSession(sessionId) {
     this.conversationHistory.delete(sessionId);
+    this.collectedInfo.delete(sessionId);
   }
 
   // Get conversation history for debugging

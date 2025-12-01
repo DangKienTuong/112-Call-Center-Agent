@@ -1,5 +1,6 @@
 const Ticket = require('../models/Ticket');
 const openaiService = require('../services/openaiService');
+const geminiService = require('../services/geminiService');
 
 // Process chat message using OpenAI
 exports.processMessage = async (req, res) => {
@@ -22,6 +23,7 @@ exports.processMessage = async (req, res) => {
     // Log the response for debugging
     console.log('AI Response:', result.response);
     console.log('Extracted Info:', result.ticketInfo);
+    console.log('Should Create Ticket:', result.shouldCreateTicket);
 
     res.json({
       success: true,
@@ -45,72 +47,53 @@ exports.processMessage = async (req, res) => {
   }
 };
 
-// Create ticket from chat
+// Create ticket from chat and get first aid guidance
 exports.createTicketFromChat = async (req, res) => {
   try {
     const { ticketInfo, sessionId } = req.body;
 
-    // Validate required fields - must have complete information
+    // Validate required fields
     if (!ticketInfo || !ticketInfo.location || !ticketInfo.emergencyType) {
       return res.status(400).json({
         success: false,
-        message: 'Incomplete ticket information. Location and emergency type are required.'
+        message: 'Thông tin chưa đầy đủ. Cần có địa chỉ và loại tình huống khẩn cấp.'
       });
     }
-    
-    // Validate phone number is provided (MANDATORY for emergency callback)
+
+    // Validate phone number (MANDATORY)
     if (!ticketInfo.reporter || !ticketInfo.reporter.phone) {
       return res.status(400).json({
         success: false,
-        message: 'Reporter phone number is required for emergency callback.'
-      });
-    }
-    
-    // Validate location has sufficient detail (city/district/ward or landmarks)
-    const hasLocationDetails = 
-      ticketInfo.location.toLowerCase().includes('city') ||
-      ticketInfo.location.toLowerCase().includes('district') ||
-      ticketInfo.location.toLowerCase().includes('ward') ||
-      ticketInfo.location.toLowerCase().includes('quận') ||
-      ticketInfo.location.toLowerCase().includes('phường') ||
-      ticketInfo.location.toLowerCase().includes('thành phố') ||
-      ticketInfo.landmarks ||
-      (ticketInfo.location.includes(',') && ticketInfo.location.split(',').length >= 2);
-    
-    if (!hasLocationDetails) {
-      return res.status(400).json({
-        success: false,
-        message: 'Location must include city/district/ward information or nearby landmarks for accurate dispatch.'
+        message: 'Cần có số điện thoại để lực lượng cứu hộ liên hệ.'
       });
     }
 
     // Generate ticket ID
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
-    const randomStr = Math.random().toString(36).substring(7);
-    const ticketId = `TD-${dateStr}-${timeStr}-${randomStr.toUpperCase()}`;
+    const timeStr = now.toISOString().slice(11, 19).replace(/:/g, '');
+    const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const ticketId = `TD-${dateStr}-${timeStr}-${randomStr}`;
 
     // Create ticket object
     const ticket = new Ticket({
       ticketId,
       reporter: {
-        name: ticketInfo.reporter.name || 'Unknown',
-        phone: ticketInfo.reporter.phone || 'Not provided',
-        relationship: ticketInfo.reporter.relationship || 'Caller'
+        name: ticketInfo.reporter.name || 'Chưa xác định',
+        phone: ticketInfo.reporter.phone,
+        email: ticketInfo.reporter.email || ''
       },
       location: {
         address: ticketInfo.location,
-        landmarks: ticketInfo.landmarks || '',
-        coordinates: ticketInfo.coordinates || null
+        landmarks: ticketInfo.landmarks || ''
       },
       emergencyType: ticketInfo.emergencyType,
-      severity: ticketInfo.severity || 'URGENT',
-      description: ticketInfo.description || 'Emergency reported via 112 hotline',
+      description: ticketInfo.description || 'Báo cáo qua tổng đài 112',
       affectedPeople: {
         total: ticketInfo.affectedPeople?.total || 1,
         injured: ticketInfo.affectedPeople?.injured || 0,
-        status: ticketInfo.affectedPeople?.status || 'Unknown'
+        critical: ticketInfo.affectedPeople?.critical || 0,
+        deceased: ticketInfo.affectedPeople?.deceased || 0
       },
       supportRequired: {
         police: ticketInfo.supportRequired?.police || false,
@@ -118,12 +101,9 @@ exports.createTicketFromChat = async (req, res) => {
         fireDepartment: ticketInfo.supportRequired?.fireDepartment || false,
         rescue: ticketInfo.supportRequired?.rescue || false
       },
-      status: ticketInfo.severity === 'CRITICAL' ? 'DISPATCHED' : 'URGENT',
-      priority: ticketInfo.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
-      additionalInfo: ticketInfo.additionalInfo || '',
-      chatSessionId: sessionId,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      status: 'URGENT',
+      priority: ticketInfo.priority || 'HIGH',
+      chatSessionId: sessionId
     });
 
     // Save ticket to database
@@ -132,23 +112,50 @@ exports.createTicketFromChat = async (req, res) => {
     // Clear the session history after ticket creation
     openaiService.clearSession(sessionId);
 
-    // Log ticket creation
     console.log(`Emergency ticket created: ${ticketId}`);
 
-    // Send response
+    // Get first aid guidance from Gemini
+    let firstAidGuidance = '';
+    try {
+      firstAidGuidance = await geminiService.getFirstAidGuidance(
+        ticketInfo.emergencyType,
+        ticketInfo.description || ''
+      );
+    } catch (guidanceError) {
+      console.error('Error getting first aid guidance:', guidanceError);
+      firstAidGuidance = 'Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý.';
+    }
+
     // Map emergency type to Vietnamese
     const emergencyTypeMap = {
       'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
-      'MEDICAL': 'Cấp cứu',
+      'MEDICAL': 'Cấp cứu y tế',
       'SECURITY': 'An ninh'
     };
+
+    // Build response message
+    const confirmationMessage = `✅ **PHIẾU KHẨN CẤP ${ticketId} ĐÃ ĐƯỢC TẠO**
+
+📋 **Thông tin đã ghi nhận:**
+• Địa điểm: ${ticketInfo.location}
+• Loại tình huống: ${emergencyTypeMap[ticketInfo.emergencyType] || ticketInfo.emergencyType}
+• Số điện thoại: ${ticketInfo.reporter.phone}
+• Số người bị ảnh hưởng: ${ticketInfo.affectedPeople?.total || 1}
+
+🚨 **Lực lượng cứu hộ đang được điều động đến ngay!**
+
+---
+
+💡 **HƯỚNG DẪN XỬ LÝ BAN ĐẦU:**
+${firstAidGuidance}`;
 
     res.json({
       success: true,
       data: {
         ticket: ticket,
         ticketId: ticketId,
-        message: `Phiếu khẩn cấp ${ticketId} đã được tạo thành công.\n\n📋 **Thông tin đã ghi nhận:**\n• Địa điểm: ${ticketInfo.location}\n• Loại tình huống: ${emergencyTypeMap[ticketInfo.emergencyType] || ticketInfo.emergencyType}\n• Người báo: ${ticketInfo.reporter.name || 'Chưa xác định'}\n• Số điện thoại: ${ticketInfo.reporter.phone}\n• Số người bị ảnh hưởng: ${ticketInfo.affectedPeople?.total || 1}\n\n✅ Lực lượng cứu hộ đang được điều động đến địa điểm ngay lập tức.`
+        message: confirmationMessage,
+        firstAidGuidance: firstAidGuidance
       }
     });
 
@@ -157,7 +164,7 @@ exports.createTicketFromChat = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Failed to create emergency ticket',
+      message: 'Không thể tạo phiếu khẩn cấp',
       error: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
     });
   }
@@ -211,6 +218,7 @@ exports.healthCheck = async (req, res) => {
       service: 'Emergency 112 Chat Service',
       status: 'operational',
       openai: process.env.OPENAI_API_KEY ? 'configured' : 'not configured',
+      gemini: process.env.GEMINI_API_KEY ? 'configured' : 'not configured',
       timestamp: new Date().toISOString()
     };
 
