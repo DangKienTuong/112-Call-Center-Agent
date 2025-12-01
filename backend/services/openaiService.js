@@ -147,12 +147,8 @@ class OpenAIService {
 
       const aiResponse = completion.choices[0].message.content;
 
-      // Try to extract JSON from AI response
-      const jsonData = this.extractJsonFromResponse(aiResponse);
-      if (jsonData) {
-        // Merge AI-provided JSON with our extracted data
-        this.mergeJsonData(sessionInfo, jsonData);
-      }
+      // Extract any additional info from AI response text
+      this.extractInfoFromMessage(aiResponse, sessionInfo);
 
       // Check if ticket is ready
       const isReady = this.isTicketReady(sessionInfo);
@@ -317,47 +313,6 @@ class OpenAIService {
     // Store description
     if (!info.description && message.length > 10) {
       info.description = message.substring(0, 200);
-    }
-  }
-
-  // Extract JSON from AI response
-  extractJsonFromResponse(response) {
-    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch (e) {
-        console.log('Could not parse JSON from AI response');
-      }
-    }
-    return null;
-  }
-
-  // Merge JSON data from AI response
-  mergeJsonData(info, jsonData) {
-    if (jsonData.location) {
-      info.location = jsonData.location;
-    }
-    if (jsonData.emergencyType) {
-      info.emergencyType = jsonData.emergencyType;
-    }
-    if (jsonData.description) {
-      info.description = jsonData.description;
-    }
-    if (jsonData.reporter) {
-      if (jsonData.reporter.name) info.reporter.name = jsonData.reporter.name;
-      if (jsonData.reporter.phone) info.reporter.phone = jsonData.reporter.phone;
-    }
-    if (jsonData.affectedPeople) {
-      if (jsonData.affectedPeople.total) info.affectedPeople.total = jsonData.affectedPeople.total;
-      if (jsonData.affectedPeople.injured) info.affectedPeople.injured = jsonData.affectedPeople.injured;
-      if (jsonData.affectedPeople.critical) info.affectedPeople.critical = jsonData.affectedPeople.critical;
-    }
-    if (jsonData.supportRequired) {
-      Object.assign(info.supportRequired, jsonData.supportRequired);
-    }
-    if (jsonData.priority) {
-      info.priority = jsonData.priority;
     }
   }
 
