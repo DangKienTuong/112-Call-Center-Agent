@@ -443,11 +443,11 @@ class OpenAIService {
     } else {
       // All info collected
       const emergencyTypeVi = {
-        'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
-        'MEDICAL': 'Cấp cứu y tế',
-        'SECURITY': 'An ninh'
+        'FIRE_RESCUE': 'cứu hỏa và cứu nạn',
+        'MEDICAL': 'cấp cứu y tế',
+        'SECURITY': 'công an'
       };
-      response = `Đã ghi nhận thông tin. Lực lượng ${emergencyTypeVi[info.emergencyType] || info.emergencyType} đang được điều động đến ${info.location}!`;
+      response = `Đã tiếp nhận. Lực lượng ${emergencyTypeVi[info.emergencyType] || 'cứu hộ'} đang được điều động đến ${info.location}!`;
     }
 
     const ticketInfo = this.buildTicketInfo(info);
