@@ -139,10 +139,9 @@ function TicketDetailPage() {
 
   const getEmergencyTypeIcon = (type) => {
     switch (type) {
-      case 'FIRE': return <LocalFireDepartment color="error" />;
+      case 'FIRE_RESCUE': return <LocalFireDepartment color="error" />;
       case 'MEDICAL': return <LocalHospital color="primary" />;
       case 'SECURITY': return <Security color="warning" />;
-      case 'RESCUE': return <Build color="info" />;
       default: return <Warning color="action" />;
     }
   };

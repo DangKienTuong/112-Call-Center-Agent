@@ -136,12 +136,19 @@ exports.createTicketFromChat = async (req, res) => {
     console.log(`Emergency ticket created: ${ticketId}`);
 
     // Send response
+    // Map emergency type to Vietnamese
+    const emergencyTypeMap = {
+      'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
+      'MEDICAL': 'Cấp cứu',
+      'SECURITY': 'An ninh'
+    };
+
     res.json({
       success: true,
       data: {
         ticket: ticket,
         ticketId: ticketId,
-        message: `Phiếu khẩn cấp ${ticketId} đã được tạo thành công.\n\n📋 **Thông tin đã ghi nhận:**\n• Địa điểm: ${ticketInfo.location}\n• Loại tình huống: ${ticketInfo.emergencyType === 'FIRE' ? 'Cháy nổ' : ticketInfo.emergencyType === 'MEDICAL' ? 'Y tế' : ticketInfo.emergencyType === 'SECURITY' ? 'An ninh' : ticketInfo.emergencyType === 'RESCUE' ? 'Cứu hộ' : 'Khác'}\n• Người báo: ${ticketInfo.reporter.name || 'Chưa xác định'}\n• Số điện thoại: ${ticketInfo.reporter.phone}\n• Số người bị ảnh hưởng: ${ticketInfo.affectedPeople?.total || 1}\n\n✅ Lực lượng cứu hộ đang được điều động đến địa điểm ngay lập tức.`
+        message: `Phiếu khẩn cấp ${ticketId} đã được tạo thành công.\n\n📋 **Thông tin đã ghi nhận:**\n• Địa điểm: ${ticketInfo.location}\n• Loại tình huống: ${emergencyTypeMap[ticketInfo.emergencyType] || ticketInfo.emergencyType}\n• Người báo: ${ticketInfo.reporter.name || 'Chưa xác định'}\n• Số điện thoại: ${ticketInfo.reporter.phone}\n• Số người bị ảnh hưởng: ${ticketInfo.affectedPeople?.total || 1}\n\n✅ Lực lượng cứu hộ đang được điều động đến địa điểm ngay lập tức.`
       }
     });
 

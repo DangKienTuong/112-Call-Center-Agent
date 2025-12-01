@@ -58,11 +58,9 @@
       "LOW": "Low"
     },
     "type": {
-      "SECURITY": "Security",
-      "FIRE": "Fire",
-      "MEDICAL": "Medical",
-      "RESCUE": "Rescue",
-      "OTHER": "Other"
+      "FIRE_RESCUE": "Fire & Rescue",
+      "MEDICAL": "Medical Emergency",
+      "SECURITY": "Security"
     }
   },
   "support": {
@@ -130,9 +128,7 @@
     "phone": "Phone",
     "roles": {
       "admin": "Admin",
-      "staff": "Staff",
-      "supervisor": "Supervisor",
-      "operator": "Operator"
+      "staff": "Staff"
     },
     "statuses": {
       "active": "Active",
@@ -160,5 +156,35 @@
     "create": "Create",
     "refresh": "Refresh",
     "all": "All"
+  },
+  "createTicket": {
+    "title": "Create Ticket",
+    "selectType": "Select Emergency Type",
+    "reporterInfo": "Reporter Information",
+    "emergencyDetails": "Emergency Details",
+    "emergencyType": "Emergency Type",
+    "additionalInfo": "Additional Information",
+    "address": "Street Address",
+    "addressPlaceholder": "Enter street address, building name, or landmark",
+    "ward": "Ward/Commune",
+    "district": "District",
+    "city": "City/Province",
+    "priority": "Priority Level",
+    "descriptionPlaceholder": "Describe the emergency situation in detail...",
+    "notesPlaceholder": "Any additional notes or special instructions...",
+    "submit": "Create Emergency Ticket",
+    "success": "Emergency ticket {{id}} created successfully",
+    "typeDesc": {
+      "FIRE_RESCUE": "Fire, explosion, rescue, drowning, collapse",
+      "MEDICAL": "Medical emergency, accident, health crisis",
+      "SECURITY": "Crime, theft, violence, public order"
+    },
+    "errors": {
+      "emergencyTypeRequired": "Please select an emergency type",
+      "reporterNameRequired": "Reporter name is required",
+      "reporterPhoneRequired": "Reporter phone number is required",
+      "addressRequired": "Street address is required",
+      "descriptionRequired": "Situation description is required"
+    }
   }
 }

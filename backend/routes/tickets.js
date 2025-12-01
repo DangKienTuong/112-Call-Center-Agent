@@ -10,12 +10,15 @@ const {
   canFullUpdateTicket
 } = require('../middleware/authorize');
 
-// Public routes
-router.post('/', ticketController.createTicket);
+// Public routes (for chatbot)
+router.post('/public', ticketController.createTicket);
 router.get('/:id', ticketController.getTicket);
 
 // Protected routes
 router.use(auth); // All routes below require authentication
+
+// Create ticket (admin/staff only)
+router.post('/', isAdminOrStaff, ticketController.createTicket);
 
 // Get all tickets - accessible by admin, staff, supervisor, operator
 router.get('/', ticketController.getTickets);

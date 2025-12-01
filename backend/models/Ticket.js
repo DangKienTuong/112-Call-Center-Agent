@@ -40,9 +40,12 @@ const ticketSchema = new mongoose.Schema({
     }
   },
   // Emergency Details
+  // FIRE_RESCUE: Phòng cháy chữa cháy và Cứu nạn cứu hộ
+  // MEDICAL: Cấp cứu
+  // SECURITY: An ninh
   emergencyType: {
     type: String,
-    enum: ['SECURITY', 'FIRE', 'MEDICAL', 'RESCUE', 'OTHER'],
+    enum: ['FIRE_RESCUE', 'MEDICAL', 'SECURITY'],
     required: true
   },
   emergencySubType: String,

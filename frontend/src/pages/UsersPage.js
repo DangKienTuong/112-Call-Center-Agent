@@ -113,7 +113,7 @@ function UsersPage() {
       username: '',
       email: '',
       password: '',
-      role: 'operator',
+      role: 'staff',
       status: 'active',
       profile: {
         fullName: '',
@@ -298,8 +298,6 @@ function UsersPage() {
                 <MenuItem value="">{t('common.all')}</MenuItem>
                 <MenuItem value="admin">{t('users.roles.admin')}</MenuItem>
                 <MenuItem value="staff">{t('users.roles.staff')}</MenuItem>
-                <MenuItem value="supervisor">{t('users.roles.supervisor')}</MenuItem>
-                <MenuItem value="operator">{t('users.roles.operator')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -478,8 +476,6 @@ function UsersPage() {
                 >
                   <MenuItem value="admin">{t('users.roles.admin')}</MenuItem>
                   <MenuItem value="staff">{t('users.roles.staff')}</MenuItem>
-                  <MenuItem value="supervisor">{t('users.roles.supervisor')}</MenuItem>
-                  <MenuItem value="operator">{t('users.roles.operator')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

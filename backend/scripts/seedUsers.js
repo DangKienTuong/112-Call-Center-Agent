@@ -3,6 +3,10 @@
  *
  * This script creates initial admin and staff users for the 112 Emergency Call Center system.
  *
+ * Roles:
+ *   - Admin: Full access to all features (tickets, users, dashboard)
+ *   - Staff: Can view tickets and update ticket status only (no dashboard access)
+ *
  * Usage:
  *   1. Make sure MongoDB is running on localhost:27017
  *   2. Navigate to the backend directory: cd backend
@@ -50,8 +54,8 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['operator', 'supervisor', 'admin', 'staff'],
-    default: 'operator'
+    enum: ['admin', 'staff'],
+    default: 'staff'
   },
   profile: {
     fullName: String,
@@ -114,32 +118,6 @@ const defaultUsers = [
       phone: '0987654321'
     },
     status: 'active'
-  },
-  {
-    username: 'supervisor',
-    email: 'supervisor@112.vn',
-    password: 'supervisor123',
-    role: 'supervisor',
-    profile: {
-      fullName: 'Team Supervisor',
-      employeeId: 'SUP001',
-      department: 'Operations',
-      phone: '0111222333'
-    },
-    status: 'active'
-  },
-  {
-    username: 'operator',
-    email: 'operator@112.vn',
-    password: 'operator123',
-    role: 'operator',
-    profile: {
-      fullName: 'Call Operator',
-      employeeId: 'OPR001',
-      department: 'Call Center',
-      phone: '0444555666'
-    },
-    status: 'active'
   }
 ];
 
@@ -181,14 +159,12 @@ async function seedUsers() {
 
     console.log('\n--- Seed Complete ---\n');
     console.log('Default credentials:');
-    console.log('------------------------------------------');
-    console.log('| Role       | Username    | Password      |');
-    console.log('------------------------------------------');
-    console.log('| Admin      | admin       | admin123      |');
-    console.log('| Staff      | staff       | staff123      |');
-    console.log('| Supervisor | supervisor  | supervisor123 |');
-    console.log('| Operator   | operator    | operator123   |');
-    console.log('------------------------------------------');
+    console.log('----------------------------------');
+    console.log('| Role   | Username | Password  |');
+    console.log('----------------------------------');
+    console.log('| Admin  | admin    | admin123  |');
+    console.log('| Staff  | staff    | staff123  |');
+    console.log('----------------------------------');
     console.log('\nIMPORTANT: Please change these passwords in production!');
 
   } catch (error) {

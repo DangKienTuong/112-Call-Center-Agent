@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import TicketsPage from './pages/TicketsPage';
 import TicketDetailPage from './pages/TicketDetailPage';
+import CreateTicketPage from './pages/CreateTicketPage';
 import UsersPage from './pages/UsersPage';
 
 // Contexts
@@ -80,9 +81,9 @@ function App() {
                   <Route
                     path="dashboard"
                     element={
-                      <PrivateRoute>
+                      <AdminRoute allowedRoles={['admin']}>
                         <DashboardPage />
-                      </PrivateRoute>
+                      </AdminRoute>
                     }
                   />
                   <Route
@@ -91,6 +92,14 @@ function App() {
                       <PrivateRoute>
                         <TicketsPage />
                       </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="tickets/create"
+                    element={
+                      <AdminRoute allowedRoles={['admin', 'staff']}>
+                        <CreateTicketPage />
+                      </AdminRoute>
                     }
                   />
                   <Route

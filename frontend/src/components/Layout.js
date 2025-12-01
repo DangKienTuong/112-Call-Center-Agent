@@ -71,7 +71,7 @@ function Layout() {
 
   const menuItems = [
     { text: t('navigation.chat'), icon: <Phone />, path: '/chat', public: true },
-    { text: t('navigation.dashboard'), icon: <Dashboard />, path: '/dashboard' },
+    { text: t('navigation.dashboard'), icon: <Dashboard />, path: '/dashboard', roles: ['admin'] },
     { text: t('navigation.tickets'), icon: <Assignment />, path: '/tickets' },
     { text: t('navigation.users'), icon: <People />, path: '/users', roles: ['admin'] }
   ];

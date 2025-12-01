@@ -58,11 +58,9 @@
       "LOW": "Thấp"
     },
     "type": {
-      "SECURITY": "An ninh",
-      "FIRE": "Cháy nổ",
-      "MEDICAL": "Y tế",
-      "RESCUE": "Cứu hộ",
-      "OTHER": "Khác"
+      "FIRE_RESCUE": "PCCC & Cứu nạn cứu hộ",
+      "MEDICAL": "Cấp cứu",
+      "SECURITY": "An ninh"
     }
   },
   "support": {
@@ -130,9 +128,7 @@
     "phone": "Điện thoại",
     "roles": {
       "admin": "Quản trị viên",
-      "staff": "Nhân viên",
-      "supervisor": "Giám sát viên",
-      "operator": "Tổng đài viên"
+      "staff": "Nhân viên"
     },
     "statuses": {
       "active": "Hoạt động",
@@ -160,5 +156,35 @@
     "create": "Tạo mới",
     "refresh": "Làm mới",
     "all": "Tất cả"
+  },
+  "createTicket": {
+    "title": "Tạo phiếu khẩn cấp",
+    "selectType": "Chọn loại tình huống khẩn cấp",
+    "reporterInfo": "Thông tin người báo",
+    "emergencyDetails": "Chi tiết tình huống",
+    "emergencyType": "Loại tình huống",
+    "additionalInfo": "Thông tin bổ sung",
+    "address": "Địa chỉ",
+    "addressPlaceholder": "Nhập số nhà, tên đường, tòa nhà hoặc địa điểm",
+    "ward": "Phường/Xã",
+    "district": "Quận/Huyện",
+    "city": "Tỉnh/Thành phố",
+    "priority": "Mức độ ưu tiên",
+    "descriptionPlaceholder": "Mô tả chi tiết tình huống khẩn cấp...",
+    "notesPlaceholder": "Ghi chú hoặc yêu cầu đặc biệt...",
+    "submit": "Tạo phiếu khẩn cấp",
+    "success": "Phiếu khẩn cấp {{id}} đã được tạo thành công",
+    "typeDesc": {
+      "FIRE_RESCUE": "Cháy, nổ, cứu hộ, đuối nước, sập đổ",
+      "MEDICAL": "Cấp cứu y tế, tai nạn, khủng hoảng sức khỏe",
+      "SECURITY": "Tội phạm, trộm cắp, bạo lực, trật tự công cộng"
+    },
+    "errors": {
+      "emergencyTypeRequired": "Vui lòng chọn loại tình huống",
+      "reporterNameRequired": "Vui lòng nhập tên người báo",
+      "reporterPhoneRequired": "Vui lòng nhập số điện thoại người báo",
+      "addressRequired": "Vui lòng nhập địa chỉ",
+      "descriptionRequired": "Vui lòng mô tả tình huống"
+    }
   }
 }

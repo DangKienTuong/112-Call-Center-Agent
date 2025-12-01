@@ -28,7 +28,8 @@ import {
   Download,
   FilterList,
   Refresh,
-  Edit
+  Edit,
+  Add
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
@@ -134,13 +135,24 @@ function TicketsPage() {
         <Typography variant="h4">
           {t('navigation.tickets')}
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<Refresh />}
-          onClick={fetchTickets}
-        >
-          {t('common.refresh')}
-        </Button>
+        <Box display="flex" gap={1}>
+          {canUpdateStatus && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate('/tickets/create')}
+            >
+              {t('createTicket.title')}
+            </Button>
+          )}
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={fetchTickets}
+          >
+            {t('common.refresh')}
+          </Button>
+        </Box>
       </Box>
 
       {/* Filters */}
@@ -168,18 +180,16 @@ function TicketsPage() {
           </Grid>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth size="small">
-              <InputLabel>Type</InputLabel>
+              <InputLabel>{t('createTicket.emergencyType')}</InputLabel>
               <Select
                 value={filters.emergencyType}
-                label="Type"
+                label={t('createTicket.emergencyType')}
                 onChange={(e) => handleFilterChange('emergencyType', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="SECURITY">{t('ticket.type.SECURITY')}</MenuItem>
-                <MenuItem value="FIRE">{t('ticket.type.FIRE')}</MenuItem>
+                <MenuItem value="">{t('common.all')}</MenuItem>
+                <MenuItem value="FIRE_RESCUE">{t('ticket.type.FIRE_RESCUE')}</MenuItem>
                 <MenuItem value="MEDICAL">{t('ticket.type.MEDICAL')}</MenuItem>
-                <MenuItem value="RESCUE">{t('ticket.type.RESCUE')}</MenuItem>
-                <MenuItem value="OTHER">{t('ticket.type.OTHER')}</MenuItem>
+                <MenuItem value="SECURITY">{t('ticket.type.SECURITY')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>

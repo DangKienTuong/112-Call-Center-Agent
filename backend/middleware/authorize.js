@@ -14,19 +14,7 @@ const rolePermissions = {
   staff: {
     tickets: ['read', 'updateStatus'],
     users: [],
-    dashboard: ['read'],
-    reports: ['read']
-  },
-  supervisor: {
-    tickets: ['create', 'read', 'update', 'updateStatus'],
-    users: ['read'],
-    dashboard: ['read'],
-    reports: ['read', 'export']
-  },
-  operator: {
-    tickets: ['create', 'read'],
-    users: [],
-    dashboard: ['read'],
+    dashboard: [],
     reports: []
   }
 };
