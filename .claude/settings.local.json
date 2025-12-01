@@ -31,10 +31,7 @@
       "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d '{\"\"\"\"message\"\"\"\":\"\"\"\"My phone number is 555-123-4567\"\"\"\",\"\"\"\"sessionId\"\"\"\":\"\"\"\"test456\"\"\"\",\"\"\"\"context\"\"\"\":[{\"\"\"\"role\"\"\"\":\"\"\"\"reporter\"\"\"\",\"\"\"\"message\"\"\"\":\"\"\"\"Help! There is a fire at 123 Main Street!\"\"\"\"},{\"\"\"\"role\"\"\"\":\"\"\"\"operator\"\"\"\",\"\"\"\"message\"\"\"\":\"\"\"\"Please provide your phone number so emergency services can contact you.\"\"\"\"}]}' -s)",
       "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"My phone number is 555-123-4567\"\",\"\"sessionId\"\":\"\"test456\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"Help there is a fire at 123 Main Street\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"Please provide your phone number\"\"}]}\" -s)",
       "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"There is fire at 456 Oak Avenue\"\",\"\"sessionId\"\":\"\"testnew\"\",\"\"context\"\":[]}\" -s)",
-      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Phone is 0901234567\"\",\"\"sessionId\"\":\"\"testnew\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"There is fire at 456 Oak Avenue\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"Please provide your phone number so emergency services can contact you.\"\"}]}\" -s)",
-      "WebFetch(domain:ai.google.dev)",
-      "WebSearch",
-      "WebFetch(domain:www.philschmid.de)"
+      "Bash(curl -X POST http://localhost:5000/api/chat/message -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Phone is 0901234567\"\",\"\"sessionId\"\":\"\"testnew\"\",\"\"context\"\":[{\"\"role\"\":\"\"reporter\"\",\"\"message\"\":\"\"There is fire at 456 Oak Avenue\"\"},{\"\"role\"\":\"\"operator\"\",\"\"message\"\":\"\"Please provide your phone number so emergency services can contact you.\"\"}]}\" -s)"
     ],
     "deny": [],
     "ask": []
