@@ -1,6 +1,6 @@
 const Ticket = require('../models/Ticket');
 const openaiService = require('../services/openaiService');
-const geminiService = require('../services/geminiService');
+const firstAidService = require('../services/firstAidService');
 
 // Process chat message using OpenAI
 exports.processMessage = async (req, res) => {
@@ -115,12 +115,12 @@ exports.createTicketFromChat = async (req, res) => {
 
     console.log(`Emergency ticket created: ${ticketId}`);
 
-    // Get first aid guidance from Gemini based on emergency types and description
+    // Get first aid guidance from OpenAI based on emergency types and description
     let firstAidGuidance = '';
     try {
       // Pass all emergency types (array) and the description
       const emergencyTypes = ticketInfo.emergencyTypes || [ticketInfo.emergencyType];
-      firstAidGuidance = await geminiService.getFirstAidGuidance(
+      firstAidGuidance = await firstAidService.getFirstAidGuidance(
         emergencyTypes,
         ticketInfo.description || ''
       );
@@ -233,7 +233,7 @@ exports.healthCheck = async (req, res) => {
       service: 'Emergency 112 Chat Service',
       status: 'operational',
       openai: process.env.OPENAI_API_KEY ? 'configured' : 'not configured',
-      gemini: process.env.GEMINI_API_KEY ? 'configured' : 'not configured',
+      openai_model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview (default)',
       timestamp: new Date().toISOString()
     };
 

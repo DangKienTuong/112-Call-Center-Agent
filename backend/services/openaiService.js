@@ -37,11 +37,12 @@ class OpenAIService {
   getDefaultPrompt() {
     return `Bạn là tổng đài viên AI của đường dây nóng khẩn cấp 112 Việt Nam.
     Thu thập NHANH 4 thông tin bắt buộc:
-    1. Địa chỉ đầy đủ (số nhà, đường, quận/huyện, thành phố)
+    1. Địa chỉ đầy đủ (số nhà, đường, phường/xã, tỉnh/thành phố)
     2. Loại tình huống (FIRE_RESCUE/MEDICAL/SECURITY)
     3. Số điện thoại liên hệ
     4. Số người bị ảnh hưởng
 
+    KHÔNG yêu cầu quận/huyện.
     Hỏi từng thông tin một. Khi đủ thông tin, tạo JSON.
     LUÔN trả lời bằng TIẾNG VIỆT.`;
   }
@@ -76,7 +77,9 @@ class OpenAIService {
           fireDepartment: false,
           rescue: false
         },
-        priority: 'HIGH'
+        priority: 'HIGH',
+        confirmationShown: false, // Flag đánh dấu đã hiển thị xác nhận cho người dùng chưa
+        userConfirmed: false // Flag đánh dấu người dùng đã xác nhận thông tin chưa
       });
     }
     return this.collectedInfo.get(sessionId);
@@ -103,7 +106,7 @@ class OpenAIService {
       // Check if OpenAI API key is configured
       if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === '') {
         console.log('OpenAI API key not configured, using fallback response');
-        return this.fallbackResponse(message, sessionInfo, sessionId);
+        return await this.fallbackResponse(message, sessionInfo, sessionId);
       }
 
       // Get or create conversation history for this session
@@ -155,14 +158,63 @@ class OpenAIService {
         this.mergeJsonData(sessionInfo, jsonData);
       }
 
-      // Check if ticket is ready
+      // Kiểm tra xem đã đủ thông tin cơ bản chưa
+      const hasAllInfo = this.hasAllRequiredInfo(sessionInfo);
+      let finalResponse = aiResponse;
+      
+      // Nếu đủ thông tin và chưa hiển thị xác nhận -> hiển thị xác nhận cho người dùng
+      if (hasAllInfo && !sessionInfo.confirmationShown) {
+        sessionInfo.confirmationShown = true;
+        
+        // Xây dựng danh sách lực lượng cần điều động
+        const forces = [];
+        if (sessionInfo.supportRequired.police) forces.push('Công an');
+        if (sessionInfo.supportRequired.fireDepartment) forces.push('Cứu hỏa');
+        if (sessionInfo.supportRequired.ambulance) forces.push('Cấp cứu');
+        if (sessionInfo.supportRequired.rescue && !sessionInfo.supportRequired.fireDepartment) forces.push('Cứu hộ');
+        const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
+        
+        // Map loại tình huống sang tiếng Việt
+        const emergencyTypeMap = {
+          'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
+          'MEDICAL': 'Cấp cứu y tế',
+          'SECURITY': 'An ninh'
+        };
+        const emergencyTypes = sessionInfo.emergencyTypes || [sessionInfo.emergencyType];
+        const emergencyTypesVi = emergencyTypes.map(t => emergencyTypeMap[t] || t).join(', ');
+        
+        // Hiển thị xác nhận thông tin
+        finalResponse = `📋 **XÁC NHẬN THÔNG TIN PHIẾU KHẨN CẤP:**
+
+• **Địa điểm:** ${sessionInfo.location}
+• **Loại tình huống:** ${emergencyTypesVi}
+• **Số điện thoại:** ${sessionInfo.reporter.phone}
+• **Số người bị ảnh hưởng:** ${sessionInfo.affectedPeople.total} người
+
+🚨 **Lực lượng sẽ điều động:** ${forcesStr}
+
+⚠️ **Vui lòng xác nhận thông tin trên đã chính xác?** (Trả lời "Đúng" hoặc "Xác nhận" để tạo phiếu khẩn cấp)`;
+      }
+      
+      // Kiểm tra xem người dùng đã xác nhận chưa
+      if (sessionInfo.confirmationShown && !sessionInfo.userConfirmed) {
+        const confirmKeywords = ['đúng', 'xác nhận', 'ok', 'yes', 'đúng rồi', 'chính xác', 'đồng ý', 'oke', 'ừ', 'uh', 'vâng'];
+        const lowerMessage = message.toLowerCase().trim();
+        
+        if (confirmKeywords.some(keyword => lowerMessage.includes(keyword))) {
+          sessionInfo.userConfirmed = true;
+          console.log('User confirmed ticket info for session:', sessionId);
+        }
+      }
+
+      // Check if ticket is ready (cần đủ thông tin VÀ người dùng đã xác nhận)
       const isReady = this.isTicketReady(sessionInfo);
 
       // Build final ticket info for response
       const ticketInfo = this.buildTicketInfo(sessionInfo);
 
       return {
-        response: aiResponse,
+        response: finalResponse,
         ticketInfo: ticketInfo,
         shouldCreateTicket: isReady
       };
@@ -170,8 +222,31 @@ class OpenAIService {
     } catch (error) {
       console.error('OpenAI API Error:', error);
       const sessionInfo = this.getSessionInfo(sessionId);
-      return this.fallbackResponse(message, sessionInfo, sessionId);
+      return await this.fallbackResponse(message, sessionInfo, sessionId);
     }
+  }
+
+  // Kiểm tra xem đã đủ 4 thông tin bắt buộc chưa
+  // (Cần: địa chỉ, loại tình huống, SĐT, số người bị ảnh hưởng)
+  hasAllRequiredInfo(info) {
+    const hasValidLocation = info.location && (
+      info.location.toLowerCase().includes('phường') ||
+      info.location.toLowerCase().includes('xã') ||
+      info.location.toLowerCase().includes('thành phố') ||
+      info.location.toLowerCase().includes('tp.') ||
+      info.location.toLowerCase().includes('tỉnh') ||
+      info.location.toLowerCase().includes('ward') ||
+      info.location.includes(',')
+    );
+
+    const hasEmergencyType = (info.emergencyTypes && info.emergencyTypes.length > 0) ||
+      (info.emergencyType && ['FIRE_RESCUE', 'MEDICAL', 'SECURITY'].includes(info.emergencyType));
+
+    const hasPhone = info.reporter.phone && info.reporter.phone.length >= 9;
+    
+    const hasAffectedPeople = info.affectedPeople.total > 0;
+
+    return !!(hasValidLocation && hasEmergencyType && hasPhone && hasAffectedPeople);
   }
 
   // Extract information from a single message
@@ -434,14 +509,13 @@ class OpenAIService {
 
   // Check if we have enough information to create a ticket
   isTicketReady(info) {
-    // Must have location with district/city
+    // Must have location with ward/city (quận/huyện is NOT required)
     const hasValidLocation = info.location && (
-      info.location.toLowerCase().includes('quận') ||
-      info.location.toLowerCase().includes('huyện') ||
       info.location.toLowerCase().includes('phường') ||
+      info.location.toLowerCase().includes('xã') ||
       info.location.toLowerCase().includes('thành phố') ||
       info.location.toLowerCase().includes('tp.') ||
-      info.location.toLowerCase().includes('district') ||
+      info.location.toLowerCase().includes('tỉnh') ||
       info.location.toLowerCase().includes('ward') ||
       info.location.includes(',') // Has multiple parts
     );
@@ -453,10 +527,13 @@ class OpenAIService {
     // Must have phone number
     const hasPhone = info.reporter.phone && info.reporter.phone.length >= 9;
 
-    // Must have some info about affected people (at least we know there's someone)
-    const hasAffectedInfo = info.affectedPeople.total > 0 || info.description;
+    // QUAN TRỌNG: Phải có số người bị ảnh hưởng ĐƯỢC XÁC NHẬN
+    const hasAffectedPeople = info.affectedPeople.total > 0;
+    
+    // QUAN TRỌNG: Người dùng PHẢI xác nhận thông tin trước khi tạo phiếu
+    const userHasConfirmed = info.userConfirmed === true;
 
-    return !!(hasValidLocation && hasEmergencyType && hasPhone && hasAffectedInfo);
+    return !!(hasValidLocation && hasEmergencyType && hasPhone && hasAffectedPeople && userHasConfirmed);
   }
 
   // Build ticket info object for response
@@ -482,26 +559,21 @@ class OpenAIService {
   }
 
   // Fallback response when OpenAI is unavailable
-  fallbackResponse(message, info, sessionId) {
+  async fallbackResponse(message, info, sessionId) {
     // Extract info from current message
     this.extractInfoFromMessage(message, info);
 
     let response = '';
-    const missingInfo = [];
 
     // Check what's missing and ask for it
-    if (!info.location || !info.locationDetails.district) {
-      response = 'Bạn đang ở đâu? Cho tôi địa chỉ chính xác (số nhà, tên đường, quận/huyện, thành phố).';
-      missingInfo.push('location');
+    if (!info.location || (!info.locationDetails.ward && !info.locationDetails.city)) {
+      response = 'Bạn đang ở đâu? Cho tôi địa chỉ chính xác (số nhà, tên đường, phường/xã, tỉnh/thành phố).';
     } else if (!info.emergencyType) {
       response = 'Chuyện gì đang xảy ra? Có cháy, tai nạn, hay cần công an?';
-      missingInfo.push('emergencyType');
     } else if (!info.reporter.phone) {
       response = 'Số điện thoại của bạn là gì để lực lượng cứu hộ liên hệ?';
-      missingInfo.push('phone');
     } else if (info.affectedPeople.total === 0) {
       response = 'Có bao nhiêu người cần trợ giúp? Có ai bị thương không?';
-      missingInfo.push('affectedPeople');
     } else {
       // All info collected - Xây dựng danh sách lực lượng cần điều động
       const forces = [];
@@ -509,9 +581,42 @@ class OpenAIService {
       if (info.supportRequired.fireDepartment) forces.push('Cứu hỏa');
       if (info.supportRequired.ambulance) forces.push('Cấp cứu');
       if (info.supportRequired.rescue && !info.supportRequired.fireDepartment) forces.push('Cứu hộ');
+      const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
+      
+      // Map loại tình huống sang tiếng Việt
+      const emergencyTypeMap = {
+        'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
+        'MEDICAL': 'Cấp cứu y tế',
+        'SECURITY': 'An ninh'
+      };
+      const emergencyTypes = info.emergencyTypes || [info.emergencyType];
+      const emergencyTypesVi = emergencyTypes.map(t => emergencyTypeMap[t] || t).join(', ');
+      
+      // Nếu chưa hiển thị xác nhận -> hiển thị xác nhận
+      if (!info.confirmationShown) {
+        info.confirmationShown = true;
+        response = `📋 **XÁC NHẬN THÔNG TIN PHIẾU KHẨN CẤP:**
 
-      const forcesStr = forces.length > 0 ? forces.join(' và ') : 'Lực lượng cứu hộ';
-      response = `Đã tiếp nhận. ${forcesStr} đang được điều động đến ${info.location}!`;
+• **Địa điểm:** ${info.location}
+• **Loại tình huống:** ${emergencyTypesVi}
+• **Số điện thoại:** ${info.reporter.phone}
+• **Số người bị ảnh hưởng:** ${info.affectedPeople.total} người
+
+🚨 **Lực lượng sẽ điều động:** ${forcesStr}
+
+⚠️ **Vui lòng xác nhận thông tin trên đã chính xác?** (Trả lời "Đúng" hoặc "Xác nhận" để tạo phiếu khẩn cấp)`;
+      } else if (!info.userConfirmed) {
+        // Kiểm tra người dùng xác nhận
+        const confirmKeywords = ['đúng', 'xác nhận', 'ok', 'yes', 'đúng rồi', 'chính xác', 'đồng ý', 'oke', 'ừ', 'uh', 'vâng'];
+        const lowerMessage = message.toLowerCase().trim();
+        
+        if (confirmKeywords.some(keyword => lowerMessage.includes(keyword))) {
+          info.userConfirmed = true;
+          response = `✅ Đã xác nhận! Đang tạo phiếu khẩn cấp...`;
+        } else {
+          response = `⚠️ Vui lòng xác nhận thông tin đã chính xác bằng cách trả lời "Đúng" hoặc "Xác nhận". Nếu có thông tin sai, vui lòng cho biết để sửa lại.`;
+        }
+      }
     }
 
     const ticketInfo = this.buildTicketInfo(info);
