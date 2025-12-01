@@ -28,7 +28,9 @@ import {
   Person,
   Logout,
   Language,
-  LocalHospital
+  LocalHospital,
+  People,
+  AdminPanelSettings
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -70,7 +72,8 @@ function Layout() {
   const menuItems = [
     { text: t('navigation.chat'), icon: <Phone />, path: '/chat', public: true },
     { text: t('navigation.dashboard'), icon: <Dashboard />, path: '/dashboard' },
-    { text: t('navigation.tickets'), icon: <Assignment />, path: '/tickets' }
+    { text: t('navigation.tickets'), icon: <Assignment />, path: '/tickets' },
+    { text: t('navigation.users'), icon: <People />, path: '/users', roles: ['admin'] }
   ];
 
   const drawer = (
@@ -84,11 +87,14 @@ function Layout() {
       <Divider />
       <List>
         {menuItems.map((item) => {
+          // Skip if not public and user not logged in
           if (!item.public && !user) return null;
+          // Skip if role-restricted and user doesn't have the role
+          if (item.roles && (!user || !item.roles.includes(user.role))) return null;
           return (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
-                selected={location.pathname === item.path}
+                selected={location.pathname === item.path || location.pathname.startsWith(item.path + '/')}
                 onClick={() => {
                   navigate(item.path);
                   if (isMobile) handleDrawerToggle();

@@ -17,6 +17,10 @@ const ticketService = {
     return api.put(`/tickets/${id}`, data);
   },
 
+  updateTicketStatus: (id, status, notes) => {
+    return api.patch(`/tickets/${id}/status`, { status, notes });
+  },
+
   addMessage: (ticketId, data) => {
     return api.post(`/tickets/${ticketId}/messages`, data);
   },

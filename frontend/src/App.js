@@ -12,6 +12,8 @@ import ChatPage from './pages/ChatPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import TicketsPage from './pages/TicketsPage';
+import TicketDetailPage from './pages/TicketDetailPage';
+import UsersPage from './pages/UsersPage';
 
 // Contexts
 import { AuthProvider } from './contexts/AuthContext';
@@ -19,6 +21,7 @@ import { SocketProvider } from './contexts/SocketContext';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
+import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 
 const theme = createTheme({
@@ -88,6 +91,22 @@ function App() {
                       <PrivateRoute>
                         <TicketsPage />
                       </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="tickets/:id"
+                    element={
+                      <PrivateRoute>
+                        <TicketDetailPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="users"
+                    element={
+                      <AdminRoute allowedRoles={['admin']}>
+                        <UsersPage />
+                      </AdminRoute>
                     }
                   />
                 </Route>

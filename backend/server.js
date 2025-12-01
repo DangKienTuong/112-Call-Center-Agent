@@ -12,6 +12,7 @@ const winston = require('winston');
 const ticketRoutes = require('./routes/tickets');
 const chatRoutes = require('./routes/chat');
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
 
 // Import middleware
 const { errorHandler } = require('./middleware/errorHandler');
@@ -69,6 +70,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/emergency
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

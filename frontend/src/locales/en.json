@@ -28,9 +28,23 @@
     "phone": "Phone Number",
     "affected": "Affected People",
     "people": "people",
+    "total": "Total",
+    "injured": "Injured",
+    "critical": "Critical",
+    "deceased": "Deceased",
     "requiredSupport": "Required Support",
     "description": "Situation Description",
     "downloadPDF": "Download PDF",
+    "updateStatus": "Update Status",
+    "newStatus": "New Status",
+    "statusUpdateSuccess": "Status updated successfully",
+    "notFound": "Ticket not found",
+    "chatHistory": "Chat History",
+    "timeline": "Timeline",
+    "created": "Created",
+    "resolved": "Resolved",
+    "notes": "Notes",
+    "notesPlaceholder": "Add notes about the status change...",
     "status": {
       "URGENT": "Urgent",
       "IN_PROGRESS": "In Progress",
@@ -86,8 +100,45 @@
     "chat": "Call Center",
     "dashboard": "Dashboard",
     "tickets": "Emergency Tickets",
+    "users": "User Management",
     "settings": "Settings",
     "profile": "Profile"
+  },
+  "users": {
+    "title": "User Management",
+    "addUser": "Add User",
+    "editUser": "Edit User",
+    "createSuccess": "User created successfully",
+    "updateSuccess": "User updated successfully",
+    "deleteSuccess": "User deleted successfully",
+    "passwordRequired": "Password is required",
+    "passwordResetSuccess": "Password reset successfully",
+    "statusToggleSuccess": "User status updated",
+    "resetPassword": "Reset Password",
+    "resetPasswordFor": "Reset password for {{username}}",
+    "newPassword": "New Password",
+    "deleteConfirmTitle": "Delete User",
+    "deleteConfirmMessage": "Are you sure you want to delete user {{username}}? This action cannot be undone.",
+    "status": "Status",
+    "lastLogin": "Last Login",
+    "neverLoggedIn": "Never logged in",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "profileInfo": "Profile Information",
+    "employeeId": "Employee ID",
+    "department": "Department",
+    "phone": "Phone",
+    "roles": {
+      "admin": "Admin",
+      "staff": "Staff",
+      "supervisor": "Supervisor",
+      "operator": "Operator"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended"
+    }
   },
   "common": {
     "loading": "Loading...",
@@ -104,6 +155,10 @@
     "export": "Export",
     "import": "Import",
     "actions": "Actions",
-    "noData": "No data"
+    "noData": "No data",
+    "back": "Back",
+    "create": "Create",
+    "refresh": "Refresh",
+    "all": "All"
   }
 }

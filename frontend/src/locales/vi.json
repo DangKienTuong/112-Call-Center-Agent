@@ -28,9 +28,23 @@
     "phone": "Số điện thoại",
     "affected": "Người bị ảnh hưởng",
     "people": "người",
+    "total": "Tổng số",
+    "injured": "Bị thương",
+    "critical": "Nguy kịch",
+    "deceased": "Tử vong",
     "requiredSupport": "Hỗ trợ cần thiết",
     "description": "Mô tả tình huống",
     "downloadPDF": "Tải xuống PDF",
+    "updateStatus": "Cập nhật trạng thái",
+    "newStatus": "Trạng thái mới",
+    "statusUpdateSuccess": "Cập nhật trạng thái thành công",
+    "notFound": "Không tìm thấy phiếu",
+    "chatHistory": "Lịch sử trò chuyện",
+    "timeline": "Dòng thời gian",
+    "created": "Tạo lúc",
+    "resolved": "Giải quyết lúc",
+    "notes": "Ghi chú",
+    "notesPlaceholder": "Thêm ghi chú về thay đổi trạng thái...",
     "status": {
       "URGENT": "Khẩn cấp",
       "IN_PROGRESS": "Đang xử lý",
@@ -86,8 +100,45 @@
     "chat": "Tổng đài",
     "dashboard": "Bảng điều khiển",
     "tickets": "Phiếu khẩn cấp",
+    "users": "Quản lý người dùng",
     "settings": "Cài đặt",
     "profile": "Hồ sơ"
+  },
+  "users": {
+    "title": "Quản lý người dùng",
+    "addUser": "Thêm người dùng",
+    "editUser": "Sửa người dùng",
+    "createSuccess": "Tạo người dùng thành công",
+    "updateSuccess": "Cập nhật người dùng thành công",
+    "deleteSuccess": "Xóa người dùng thành công",
+    "passwordRequired": "Mật khẩu là bắt buộc",
+    "passwordResetSuccess": "Đặt lại mật khẩu thành công",
+    "statusToggleSuccess": "Cập nhật trạng thái người dùng thành công",
+    "resetPassword": "Đặt lại mật khẩu",
+    "resetPasswordFor": "Đặt lại mật khẩu cho {{username}}",
+    "newPassword": "Mật khẩu mới",
+    "deleteConfirmTitle": "Xóa người dùng",
+    "deleteConfirmMessage": "Bạn có chắc chắn muốn xóa người dùng {{username}}? Hành động này không thể hoàn tác.",
+    "status": "Trạng thái",
+    "lastLogin": "Đăng nhập lần cuối",
+    "neverLoggedIn": "Chưa đăng nhập",
+    "activate": "Kích hoạt",
+    "deactivate": "Vô hiệu hóa",
+    "profileInfo": "Thông tin hồ sơ",
+    "employeeId": "Mã nhân viên",
+    "department": "Phòng ban",
+    "phone": "Điện thoại",
+    "roles": {
+      "admin": "Quản trị viên",
+      "staff": "Nhân viên",
+      "supervisor": "Giám sát viên",
+      "operator": "Tổng đài viên"
+    },
+    "statuses": {
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "suspended": "Tạm khóa"
+    }
   },
   "common": {
     "loading": "Đang tải...",
@@ -104,6 +155,10 @@
     "export": "Xuất",
     "import": "Nhập",
     "actions": "Hành động",
-    "noData": "Không có dữ liệu"
+    "noData": "Không có dữ liệu",
+    "back": "Quay lại",
+    "create": "Tạo mới",
+    "refresh": "Làm mới",
+    "all": "Tất cả"
   }
 }

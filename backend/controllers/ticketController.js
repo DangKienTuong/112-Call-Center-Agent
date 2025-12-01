@@ -111,7 +111,7 @@ exports.getTicket = async (req, res) => {
   }
 };
 
-// Update ticket
+// Update ticket (full update - admin only)
 exports.updateTicket = async (req, res) => {
   try {
     const ticket = await Ticket.findByIdAndUpdate(
@@ -141,6 +141,72 @@ exports.updateTicket = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update ticket',
+      error: error.message
+    });
+  }
+};
+
+// Update ticket status only (for staff and admin)
+exports.updateTicketStatus = async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+
+    // Validate status
+    const validStatuses = ['URGENT', 'IN_PROGRESS', 'RESOLVED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    const updateData = {
+      status,
+      updatedBy: req.user._id,
+      updatedAt: new Date()
+    };
+
+    // If status is RESOLVED, set resolvedAt
+    if (status === 'RESOLVED') {
+      updateData.resolvedAt = new Date();
+    }
+
+    // Add notes if provided
+    if (notes) {
+      updateData.$push = { notes: `[${new Date().toISOString()}] ${req.user.username}: ${notes}` };
+    }
+
+    const ticket = await Ticket.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('assignedOperator', 'username profile.fullName');
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket not found'
+      });
+    }
+
+    // Emit update to all connected clients
+    if (req.io) {
+      req.io.emit('ticket_status_updated', {
+        ticketId: ticket._id,
+        status: ticket.status,
+        updatedBy: req.user.username
+      });
+    }
+
+    res.json({
+      success: true,
+      data: ticket,
+      message: `Ticket status updated to ${status}`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update ticket status',
       error: error.message
     });
   }

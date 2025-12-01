@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -19,21 +20,28 @@ import {
   FormControl,
   InputLabel,
   Grid,
-  Button
+  Button,
+  Tooltip
 } from '@mui/material';
 import {
   Visibility,
   Download,
   FilterList,
-  Refresh
+  Refresh,
+  Edit
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import ticketService from '../services/ticketService';
+import { useAuth } from '../contexts/AuthContext';
 
 function TicketsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [tickets, setTickets] = useState([]);
+
+  const canUpdateStatus = user && ['admin', 'staff'].includes(user.role);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -249,16 +257,35 @@ function TicketsPage() {
                     {new Date(ticket.createdAt).toLocaleString()}
                   </TableCell>
                   <TableCell align="center">
-                    <IconButton size="small" color="primary">
-                      <Visibility />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="secondary"
-                      onClick={() => handleDownloadPDF(ticket._id)}
-                    >
-                      <Download />
-                    </IconButton>
+                    <Tooltip title={t('common.view')}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => navigate(`/tickets/${ticket._id}`)}
+                      >
+                        <Visibility />
+                      </IconButton>
+                    </Tooltip>
+                    {canUpdateStatus && (
+                      <Tooltip title={t('ticket.updateStatus')}>
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          onClick={() => navigate(`/tickets/${ticket._id}`)}
+                        >
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title={t('ticket.downloadPDF')}>
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => handleDownloadPDF(ticket._id)}
+                      >
+                        <Download />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
