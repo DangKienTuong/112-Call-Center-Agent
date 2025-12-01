@@ -39,10 +39,15 @@ const ticketSchema = new mongoose.Schema({
       lng: Number
     }
   },
-  // Emergency Details
-  // FIRE_RESCUE: Phòng cháy chữa cháy và Cứu nạn cứu hộ
-  // MEDICAL: Cấp cứu
-  // SECURITY: An ninh
+  // Emergency Details - Có thể có nhiều loại cùng lúc
+  // FIRE_RESCUE: Phòng cháy chữa cháy và Cứu nạn cứu hộ (cháy, nổ, mắc kẹt, đuối nước, sập đổ...)
+  // MEDICAL: Cấp cứu y tế (người bị thương, tai nạn giao thông, nguy kịch, bất tỉnh...)
+  // SECURITY: An ninh trật tự (trộm, cướp, đánh nhau, giết người, đua xe...)
+  emergencyTypes: [{
+    type: String,
+    enum: ['FIRE_RESCUE', 'MEDICAL', 'SECURITY']
+  }],
+  // Loại chính (ưu tiên cao nhất) - để tương thích ngược
   emergencyType: {
     type: String,
     enum: ['FIRE_RESCUE', 'MEDICAL', 'SECURITY'],
@@ -147,6 +152,7 @@ const ticketSchema = new mongoose.Schema({
 ticketSchema.index({ ticketId: 1 });
 ticketSchema.index({ status: 1 });
 ticketSchema.index({ emergencyType: 1 });
+ticketSchema.index({ emergencyTypes: 1 });
 ticketSchema.index({ createdAt: -1 });
 ticketSchema.index({ 'location.district': 1, 'location.city': 1 });
 

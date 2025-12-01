@@ -58,7 +58,8 @@ class OpenAIService {
           city: null,
           landmarks: null
         },
-        emergencyType: null,
+        emergencyTypes: [], // Mảng các loại khẩn cấp (có thể nhiều loại)
+        emergencyType: null, // Loại chính (ưu tiên cao nhất)
         description: null,
         reporter: {
           name: null,
@@ -262,23 +263,83 @@ class OpenAIService {
       info.location = locationParts.join(', ');
     }
 
-    // Extract emergency type from keywords
-    if (/cháy|lửa|khói|nổ|gas|bốc cháy/i.test(lowerMessage)) {
-      info.emergencyType = 'FIRE_RESCUE';
+    // Extract emergency types from keywords - CÓ THỂ NHIỀU LOẠI
+    const detectedTypes = new Set(info.emergencyTypes || []);
+
+    // SECURITY - An ninh trật tự (ưu tiên nhận diện trước)
+    if (/trộm|cướp|đột nhập|ăn trộm|kẻ trộm|ăn cắp/i.test(lowerMessage)) {
+      detectedTypes.add('SECURITY');
+      info.supportRequired.police = true;
+    }
+    if (/đánh nhau|hành hung|đánh người|bạo lực|côn đồ|xô xát/i.test(lowerMessage)) {
+      detectedTypes.add('SECURITY');
+      info.supportRequired.police = true;
+    }
+    if (/đua xe|quậy phá|gây rối|say rượu|phá hoại/i.test(lowerMessage)) {
+      detectedTypes.add('SECURITY');
+      info.supportRequired.police = true;
+    }
+    if (/giết người|bắt cóc|đe dọa|khủng bố|hiếp|cưỡng/i.test(lowerMessage)) {
+      detectedTypes.add('SECURITY');
+      info.supportRequired.police = true;
+    }
+
+    // MEDICAL - Cấp cứu y tế
+    if (/tai nạn|va chạm|đâm xe|lật xe|tai nạn giao thông/i.test(lowerMessage)) {
+      detectedTypes.add('MEDICAL');
+      info.supportRequired.ambulance = true;
+    }
+    if (/bị thương|chảy máu|gãy xương|bỏng|vết thương/i.test(lowerMessage)) {
+      detectedTypes.add('MEDICAL');
+      info.supportRequired.ambulance = true;
+    }
+    if (/bất tỉnh|ngất|khó thở|đau tim|đột quỵ|nhồi máu|co giật/i.test(lowerMessage)) {
+      detectedTypes.add('MEDICAL');
+      info.supportRequired.ambulance = true;
+    }
+    if (/ngộ độc|sốc|sinh con|đẻ|người già ngã/i.test(lowerMessage)) {
+      detectedTypes.add('MEDICAL');
+      info.supportRequired.ambulance = true;
+    }
+
+    // FIRE_RESCUE - PCCC & Cứu nạn cứu hộ
+    if (/cháy|lửa|khói|nổ|gas|bốc cháy|hỏa hoạn/i.test(lowerMessage)) {
+      detectedTypes.add('FIRE_RESCUE');
       info.supportRequired.fireDepartment = true;
       info.supportRequired.rescue = true;
-    } else if (/sập|đổ|kẹt|mắc kẹt|ngập|đuối nước|chìm/i.test(lowerMessage)) {
-      info.emergencyType = 'FIRE_RESCUE';
+    }
+    if (/mắc kẹt|sập|đổ|kẹt thang máy|kẹt trong|đống đổ nát/i.test(lowerMessage)) {
+      detectedTypes.add('FIRE_RESCUE');
       info.supportRequired.rescue = true;
-    } else if (/tai nạn|đâm|va chạm|xe|chảy máu|gãy|bị thương/i.test(lowerMessage)) {
-      info.emergencyType = 'MEDICAL';
-      info.supportRequired.ambulance = true;
-    } else if (/bệnh|đau|bất tỉnh|ngất|khó thở|đột quỵ|nhồi máu/i.test(lowerMessage)) {
-      info.emergencyType = 'MEDICAL';
-      info.supportRequired.ambulance = true;
-    } else if (/cướp|trộm|đánh|đánh nhau|côn đồ|bạo lực|xô xát/i.test(lowerMessage)) {
-      info.emergencyType = 'SECURITY';
-      info.supportRequired.police = true;
+    }
+    if (/đuối nước|chìm|nhảy sông|nhảy cầu|rơi xuống nước|lũ lụt/i.test(lowerMessage)) {
+      detectedTypes.add('FIRE_RESCUE');
+      info.supportRequired.rescue = true;
+    }
+    if (/ngập|lũ|sạt lở|động đất|bão/i.test(lowerMessage)) {
+      detectedTypes.add('FIRE_RESCUE');
+      info.supportRequired.rescue = true;
+    }
+
+    // Cập nhật emergencyTypes array
+    info.emergencyTypes = Array.from(detectedTypes);
+
+    // Xác định loại chính (emergencyType) theo thứ tự ưu tiên
+    // Ưu tiên: SECURITY > FIRE_RESCUE > MEDICAL (tùy tình huống)
+    if (info.emergencyTypes.length > 0) {
+      // Nếu chỉ có 1 loại
+      if (info.emergencyTypes.length === 1) {
+        info.emergencyType = info.emergencyTypes[0];
+      } else {
+        // Nếu có nhiều loại, ưu tiên theo ngữ cảnh
+        if (info.emergencyTypes.includes('FIRE_RESCUE')) {
+          info.emergencyType = 'FIRE_RESCUE'; // Cháy nổ ưu tiên cao nhất
+        } else if (info.emergencyTypes.includes('SECURITY')) {
+          info.emergencyType = 'SECURITY';
+        } else {
+          info.emergencyType = 'MEDICAL';
+        }
+      }
     }
 
     // Extract number of people
@@ -385,9 +446,9 @@ class OpenAIService {
       info.location.includes(',') // Has multiple parts
     );
 
-    // Must have emergency type
-    const hasEmergencyType = info.emergencyType &&
-      ['FIRE_RESCUE', 'MEDICAL', 'SECURITY'].includes(info.emergencyType);
+    // Must have at least one emergency type
+    const hasEmergencyType = (info.emergencyTypes && info.emergencyTypes.length > 0) ||
+      (info.emergencyType && ['FIRE_RESCUE', 'MEDICAL', 'SECURITY'].includes(info.emergencyType));
 
     // Must have phone number
     const hasPhone = info.reporter.phone && info.reporter.phone.length >= 9;
@@ -403,7 +464,8 @@ class OpenAIService {
     return {
       location: info.location,
       landmarks: info.locationDetails.landmarks,
-      emergencyType: info.emergencyType,
+      emergencyTypes: info.emergencyTypes || [], // Mảng các loại khẩn cấp
+      emergencyType: info.emergencyType, // Loại chính (tương thích ngược)
       description: info.description,
       reporter: {
         name: info.reporter.name,
@@ -441,13 +503,15 @@ class OpenAIService {
       response = 'Có bao nhiêu người cần trợ giúp? Có ai bị thương không?';
       missingInfo.push('affectedPeople');
     } else {
-      // All info collected
-      const emergencyTypeVi = {
-        'FIRE_RESCUE': 'cứu hỏa và cứu nạn',
-        'MEDICAL': 'cấp cứu y tế',
-        'SECURITY': 'công an'
-      };
-      response = `Đã tiếp nhận. Lực lượng ${emergencyTypeVi[info.emergencyType] || 'cứu hộ'} đang được điều động đến ${info.location}!`;
+      // All info collected - Xây dựng danh sách lực lượng cần điều động
+      const forces = [];
+      if (info.supportRequired.police) forces.push('Công an');
+      if (info.supportRequired.fireDepartment) forces.push('Cứu hỏa');
+      if (info.supportRequired.ambulance) forces.push('Cấp cứu');
+      if (info.supportRequired.rescue && !info.supportRequired.fireDepartment) forces.push('Cứu hộ');
+
+      const forcesStr = forces.length > 0 ? forces.join(' và ') : 'Lực lượng cứu hộ';
+      response = `Đã tiếp nhận. ${forcesStr} đang được điều động đến ${info.location}!`;
     }
 
     const ticketInfo = this.buildTicketInfo(info);

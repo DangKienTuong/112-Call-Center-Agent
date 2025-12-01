@@ -16,7 +16,7 @@ class GeminiService {
       this.fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
       this.initializeDocuments();
     } else {
-      console.warn('Gemini API key not configured. First aid guidance will use fallback responses.');
+      console.warn('Gemini API key not configured. First aid guidance will not be available.');
     }
   }
 
@@ -25,34 +25,38 @@ class GeminiService {
     try {
       const documentsPath = path.join(__dirname, '../../reference_document');
 
-      // Upload Fire/Rescue document
+      // Upload Fire/Rescue document - Cẩm nang PCCC
       const pcccPath = path.join(documentsPath, 'Cam-nang-PCCC-trong-gia-dinh.pdf');
       if (fs.existsSync(pcccPath)) {
         try {
           const pcccFile = await this.fileManager.uploadFile(pcccPath, {
             mimeType: 'application/pdf',
-            displayName: 'PCCC Guide'
+            displayName: 'Cam nang PCCC trong gia dinh'
           });
           this.uploadedFiles['FIRE_RESCUE'] = pcccFile.file;
           console.log('Uploaded PCCC document:', pcccFile.file.name);
         } catch (err) {
           console.error('Error uploading PCCC document:', err.message);
         }
+      } else {
+        console.warn('PCCC document not found at:', pcccPath);
       }
 
-      // Upload Medical/First Aid document
+      // Upload Medical/First Aid document - Tài liệu sơ cấp cứu
       const medicalPath = path.join(documentsPath, 'tai-lieu-so-cap-cuu.pdf');
       if (fs.existsSync(medicalPath)) {
         try {
           const medicalFile = await this.fileManager.uploadFile(medicalPath, {
             mimeType: 'application/pdf',
-            displayName: 'First Aid Guide'
+            displayName: 'Tai lieu so cap cuu'
           });
           this.uploadedFiles['MEDICAL'] = medicalFile.file;
           console.log('Uploaded Medical document:', medicalFile.file.name);
         } catch (err) {
           console.error('Error uploading Medical document:', err.message);
         }
+      } else {
+        console.warn('Medical document not found at:', medicalPath);
       }
 
       this.isInitialized = true;
@@ -62,11 +66,15 @@ class GeminiService {
     }
   }
 
-  // Get first aid guidance based on emergency type and description
-  async getFirstAidGuidance(emergencyType, description) {
-    // If Gemini is not configured, return fallback
+  // Get first aid guidance based on emergency types and description
+  // emergencyTypes can be a string or array of types
+  async getFirstAidGuidance(emergencyTypes, description) {
+    // Normalize emergencyTypes to array
+    const types = Array.isArray(emergencyTypes) ? emergencyTypes : [emergencyTypes];
+
+    // If Gemini is not configured, return no guidance message
     if (!this.genAI) {
-      return this.getFallbackGuidance(emergencyType);
+      return this.getNoGuidanceMessage();
     }
 
     try {
@@ -74,52 +82,67 @@ class GeminiService {
         model: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
       });
 
-      // Determine which document to use
-      let fileData = null;
-      let documentType = '';
+      // Collect relevant documents based on emergency types
+      const filesToQuery = [];
+      const documentNames = [];
 
-      if (emergencyType === 'FIRE_RESCUE' && this.uploadedFiles['FIRE_RESCUE']) {
-        fileData = this.uploadedFiles['FIRE_RESCUE'];
-        documentType = 'phòng cháy chữa cháy';
-      } else if (emergencyType === 'MEDICAL' && this.uploadedFiles['MEDICAL']) {
-        fileData = this.uploadedFiles['MEDICAL'];
-        documentType = 'sơ cấp cứu y tế';
+      if (types.includes('FIRE_RESCUE') && this.uploadedFiles['FIRE_RESCUE']) {
+        filesToQuery.push(this.uploadedFiles['FIRE_RESCUE']);
+        documentNames.push('Cẩm nang PCCC trong gia đình');
       }
 
-      // Build the prompt
-      const prompt = `Bạn là chuyên gia tư vấn ${documentType} của tổng đài khẩn cấp 112.
-
-Tình huống người dùng đang gặp phải: "${description || emergencyType}"
-
-Dựa trên tài liệu tham khảo được cung cấp, hãy đưa ra HƯỚNG DẪN XỬ LÝ BAN ĐẦU TẠI CHỖ cho người dùng.
-
-YÊU CẦU:
-1. CHỈ đưa ra hướng dẫn NẾU tình huống này được đề cập trong tài liệu tham khảo
-2. Nếu tình huống KHÔNG được hướng dẫn trong tài liệu, trả lời: "Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý. Không tự ý thực hiện các biện pháp nếu không chắc chắn."
-3. Trả lời ngắn gọn, dễ hiểu, theo dạng danh sách các bước
-4. Ưu tiên an toàn của người dùng
-5. Không đưa ra lời khuyên y tế chuyên môn ngoài sơ cấp cứu cơ bản
-
-Hướng dẫn xử lý:`;
-
-      let result;
-
-      if (fileData) {
-        // Query with the uploaded document
-        result = await model.generateContent([
-          {
-            fileData: {
-              mimeType: fileData.mimeType,
-              fileUri: fileData.uri
-            }
-          },
-          { text: prompt }
-        ]);
-      } else {
-        // Query without document (for SECURITY or if documents not uploaded)
-        result = await model.generateContent(prompt);
+      if (types.includes('MEDICAL') && this.uploadedFiles['MEDICAL']) {
+        filesToQuery.push(this.uploadedFiles['MEDICAL']);
+        documentNames.push('Tài liệu sơ cấp cứu');
       }
 
+      // For SECURITY type, we don't have a reference document
+      // Only provide guidance if there's also MEDICAL or FIRE_RESCUE involved
+      if (types.includes('SECURITY') && filesToQuery.length === 0) {
+        return this.getNoGuidanceMessage();
+      }
+
+      // If no documents available, return no guidance
+      if (filesToQuery.length === 0) {
+        return this.getNoGuidanceMessage();
+      }
+
+      // Build the strict prompt
+      const prompt = `Bạn là tổng đài viên 112. Người dùng đang gặp tình huống khẩn cấp.
+
+**MÔ TẢ TÌNH HUỐNG CỦA NGƯỜI DÙNG:**
+"${description || 'Không có mô tả chi tiết'}"
+
+**NHIỆM VỤ CỦA BẠN:**
+Tìm trong tài liệu tham khảo (${documentNames.join(', ')}) xem có hướng dẫn xử lý ban đầu phù hợp với tình huống này không.
+
+**QUY TẮC BẮT BUỘC:**
+1. CHỈ ĐƯỢC trích dẫn hoặc tóm tắt nội dung CÓ TRONG tài liệu tham khảo
+2. KHÔNG ĐƯỢC tự bịa ra bất kỳ hướng dẫn nào không có trong tài liệu
+3. KHÔNG ĐƯỢC suy luận hoặc thêm thông tin từ kiến thức bên ngoài
+4. Nếu tình huống KHÔNG được đề cập trong tài liệu, trả lời CHÍNH XÁC: "Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý."
+5. Nếu tìm thấy hướng dẫn phù hợp, trình bày ngắn gọn theo dạng danh sách các bước
+
+**TRẢ LỜI:**`;
+
+      // Build content array with all relevant documents
+      const contentParts = [];
+
+      // Add all document files
+      for (const fileData of filesToQuery) {
+        contentParts.push({
+          fileData: {
+            mimeType: fileData.mimeType,
+            fileUri: fileData.uri
+          }
+        });
+      }
+
+      // Add the prompt
+      contentParts.push({ text: prompt });
+
+      // Query Gemini with documents
+      const result = await model.generateContent(contentParts);
       const response = result.response.text();
 
       // Clean up and format the response
@@ -127,14 +150,14 @@ Hướng dẫn xử lý:`;
 
     } catch (error) {
       console.error('Error getting Gemini guidance:', error);
-      return this.getFallbackGuidance(emergencyType);
+      return this.getNoGuidanceMessage();
     }
   }
 
   // Format the guidance response
   formatGuidance(response) {
     if (!response) {
-      return 'Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý.';
+      return this.getNoGuidanceMessage();
     }
 
     // Clean up the response
@@ -149,36 +172,9 @@ Hướng dẫn xử lý:`;
     return formatted;
   }
 
-  // Fallback guidance when Gemini is not available
-  getFallbackGuidance(emergencyType) {
-    const guidance = {
-      'FIRE_RESCUE': `🔥 **Hướng dẫn sơ bộ khi có cháy:**
-• Di chuyển ra khỏi khu vực nguy hiểm ngay lập tức
-• Đóng cửa phòng có đám cháy để hạn chế khói lan
-• Di chuyển sát mặt đất nếu có nhiều khói (cúi thấp)
-• KHÔNG sử dụng thang máy
-• Gọi to để thông báo cho người xung quanh
-• Nếu bị kẹt, tìm cửa sổ hoặc ban công để báo hiệu
-• Chờ lực lượng PCCC đến hỗ trợ`,
-
-      'MEDICAL': `🏥 **Hướng dẫn sơ cấp cứu cơ bản:**
-• Đảm bảo an toàn cho bản thân trước khi tiếp cận nạn nhân
-• Kiểm tra ý thức của nạn nhân (gọi, lay nhẹ)
-• Nếu nạn nhân bất tỉnh: Kiểm tra đường thở, hô hấp
-• Nếu chảy máu: Dùng vải sạch ép chặt vết thương
-• Không di chuyển nạn nhân nếu nghi ngờ chấn thương cột sống
-• Giữ nạn nhân ấm, trấn an và chờ cấp cứu đến`,
-
-      'SECURITY': `🛡️ **Hướng dẫn khi gặp tình huống an ninh:**
-• Đảm bảo an toàn bản thân là ưu tiên hàng đầu
-• Di chuyển đến nơi an toàn nếu có thể
-• Khóa cửa, tắt đèn nếu đang ở trong nhà
-• Ghi nhớ đặc điểm nhận dạng đối tượng (nếu an toàn để quan sát)
-• Không đối đầu trực tiếp với đối tượng nguy hiểm
-• Chờ lực lượng công an đến xử lý`
-    };
-
-    return guidance[emergencyType] || 'Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý. Đảm bảo an toàn cho bản thân và những người xung quanh.';
+  // Standard message when no guidance is available
+  getNoGuidanceMessage() {
+    return 'Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý.';
   }
 
   // Check if a file is already uploaded and still valid

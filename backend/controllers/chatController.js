@@ -87,7 +87,8 @@ exports.createTicketFromChat = async (req, res) => {
         address: ticketInfo.location,
         landmarks: ticketInfo.landmarks || ''
       },
-      emergencyType: ticketInfo.emergencyType,
+      emergencyTypes: ticketInfo.emergencyTypes || [ticketInfo.emergencyType], // Mảng các loại
+      emergencyType: ticketInfo.emergencyType, // Loại chính (tương thích ngược)
       description: ticketInfo.description || 'Báo cáo qua tổng đài 112',
       affectedPeople: {
         total: ticketInfo.affectedPeople?.total || 1,
@@ -114,11 +115,13 @@ exports.createTicketFromChat = async (req, res) => {
 
     console.log(`Emergency ticket created: ${ticketId}`);
 
-    // Get first aid guidance from Gemini
+    // Get first aid guidance from Gemini based on emergency types and description
     let firstAidGuidance = '';
     try {
+      // Pass all emergency types (array) and the description
+      const emergencyTypes = ticketInfo.emergencyTypes || [ticketInfo.emergencyType];
       firstAidGuidance = await geminiService.getFirstAidGuidance(
-        ticketInfo.emergencyType,
+        emergencyTypes,
         ticketInfo.description || ''
       );
     } catch (guidanceError) {
@@ -133,16 +136,28 @@ exports.createTicketFromChat = async (req, res) => {
       'SECURITY': 'An ninh'
     };
 
+    // Build emergency types display string
+    const emergencyTypes = ticketInfo.emergencyTypes || [ticketInfo.emergencyType];
+    const emergencyTypesVi = emergencyTypes.map(t => emergencyTypeMap[t] || t).join(', ');
+
+    // Build forces being dispatched
+    const forces = [];
+    if (ticketInfo.supportRequired?.police) forces.push('Công an');
+    if (ticketInfo.supportRequired?.fireDepartment) forces.push('Cứu hỏa');
+    if (ticketInfo.supportRequired?.ambulance) forces.push('Cấp cứu');
+    if (ticketInfo.supportRequired?.rescue && !ticketInfo.supportRequired?.fireDepartment) forces.push('Cứu hộ');
+    const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
+
     // Build response message
     const confirmationMessage = `✅ **PHIẾU KHẨN CẤP ${ticketId} ĐÃ ĐƯỢC TẠO**
 
 📋 **Thông tin đã ghi nhận:**
 • Địa điểm: ${ticketInfo.location}
-• Loại tình huống: ${emergencyTypeMap[ticketInfo.emergencyType] || ticketInfo.emergencyType}
+• Loại tình huống: ${emergencyTypesVi}
 • Số điện thoại: ${ticketInfo.reporter.phone}
 • Số người bị ảnh hưởng: ${ticketInfo.affectedPeople?.total || 1}
 
-🚨 **Lực lượng cứu hộ đang được điều động đến ngay!**
+🚨 **${forcesStr} đang được điều động đến ngay!**
 
 ---
 
