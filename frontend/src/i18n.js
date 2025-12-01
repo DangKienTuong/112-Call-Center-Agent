@@ -19,6 +19,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
+    lng: 'vi', // Đặt tiếng Việt làm ngôn ngữ mặc định
     fallbackLng: 'vi',
     debug: false,
     interpolation: {

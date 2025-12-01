@@ -10,11 +10,13 @@ class GeminiService {
     this.fileManager = null;
     this.uploadedFiles = {};
     this.isInitialized = false;
+    this.initPromise = null;
 
     if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '') {
       this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       this.fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
-      this.initializeDocuments();
+      // Store the promise so we can await it later
+      this.initPromise = this.initializeDocuments();
     } else {
       console.warn('Gemini API key not configured. First aid guidance will not be available.');
     }
@@ -24,56 +26,75 @@ class GeminiService {
   async initializeDocuments() {
     try {
       const documentsPath = path.join(__dirname, '../../reference_document');
+      console.log('Looking for reference documents in:', documentsPath);
 
       // Upload Fire/Rescue document - Cẩm nang PCCC
       const pcccPath = path.join(documentsPath, 'Cam-nang-PCCC-trong-gia-dinh.pdf');
+      console.log('Checking PCCC document at:', pcccPath);
+
       if (fs.existsSync(pcccPath)) {
         try {
+          console.log('Uploading PCCC document...');
           const pcccFile = await this.fileManager.uploadFile(pcccPath, {
             mimeType: 'application/pdf',
             displayName: 'Cam nang PCCC trong gia dinh'
           });
           this.uploadedFiles['FIRE_RESCUE'] = pcccFile.file;
-          console.log('Uploaded PCCC document:', pcccFile.file.name);
+          console.log('✓ Uploaded PCCC document:', pcccFile.file.name, 'URI:', pcccFile.file.uri);
         } catch (err) {
-          console.error('Error uploading PCCC document:', err.message);
+          console.error('✗ Error uploading PCCC document:', err.message);
         }
       } else {
-        console.warn('PCCC document not found at:', pcccPath);
+        console.warn('✗ PCCC document not found at:', pcccPath);
       }
 
       // Upload Medical/First Aid document - Tài liệu sơ cấp cứu
       const medicalPath = path.join(documentsPath, 'tai-lieu-so-cap-cuu.pdf');
+      console.log('Checking Medical document at:', medicalPath);
+
       if (fs.existsSync(medicalPath)) {
         try {
+          console.log('Uploading Medical document...');
           const medicalFile = await this.fileManager.uploadFile(medicalPath, {
             mimeType: 'application/pdf',
             displayName: 'Tai lieu so cap cuu'
           });
           this.uploadedFiles['MEDICAL'] = medicalFile.file;
-          console.log('Uploaded Medical document:', medicalFile.file.name);
+          console.log('✓ Uploaded Medical document:', medicalFile.file.name, 'URI:', medicalFile.file.uri);
         } catch (err) {
-          console.error('Error uploading Medical document:', err.message);
+          console.error('✗ Error uploading Medical document:', err.message);
         }
       } else {
-        console.warn('Medical document not found at:', medicalPath);
+        console.warn('✗ Medical document not found at:', medicalPath);
       }
 
       this.isInitialized = true;
-      console.log('Gemini service initialized with reference documents');
+      console.log('Gemini service initialized. Available documents:', Object.keys(this.uploadedFiles));
     } catch (error) {
       console.error('Error initializing Gemini documents:', error);
+    }
+  }
+
+  // Wait for initialization to complete
+  async waitForInit() {
+    if (this.initPromise) {
+      await this.initPromise;
     }
   }
 
   // Get first aid guidance based on emergency types and description
   // emergencyTypes can be a string or array of types
   async getFirstAidGuidance(emergencyTypes, description) {
+    // Wait for documents to be uploaded
+    await this.waitForInit();
+
     // Normalize emergencyTypes to array
     const types = Array.isArray(emergencyTypes) ? emergencyTypes : [emergencyTypes];
+    console.log('Getting guidance for types:', types, 'Description:', description);
 
     // If Gemini is not configured, return no guidance message
     if (!this.genAI) {
+      console.log('Gemini not configured');
       return this.getNoGuidanceMessage();
     }
 
@@ -89,21 +110,25 @@ class GeminiService {
       if (types.includes('FIRE_RESCUE') && this.uploadedFiles['FIRE_RESCUE']) {
         filesToQuery.push(this.uploadedFiles['FIRE_RESCUE']);
         documentNames.push('Cẩm nang PCCC trong gia đình');
+        console.log('Will query FIRE_RESCUE document');
       }
 
       if (types.includes('MEDICAL') && this.uploadedFiles['MEDICAL']) {
         filesToQuery.push(this.uploadedFiles['MEDICAL']);
         documentNames.push('Tài liệu sơ cấp cứu');
+        console.log('Will query MEDICAL document');
       }
 
       // For SECURITY type, we don't have a reference document
       // Only provide guidance if there's also MEDICAL or FIRE_RESCUE involved
       if (types.includes('SECURITY') && filesToQuery.length === 0) {
+        console.log('SECURITY type only, no documents to query');
         return this.getNoGuidanceMessage();
       }
 
       // If no documents available, return no guidance
       if (filesToQuery.length === 0) {
+        console.log('No documents available to query');
         return this.getNoGuidanceMessage();
       }
 
@@ -125,6 +150,8 @@ Tìm trong tài liệu tham khảo (${documentNames.join(', ')}) xem có hướn
 
 **TRẢ LỜI:**`;
 
+      console.log('Querying Gemini with', filesToQuery.length, 'documents...');
+
       // Build content array with all relevant documents
       const contentParts = [];
 
@@ -144,6 +171,8 @@ Tìm trong tài liệu tham khảo (${documentNames.join(', ')}) xem có hướn
       // Query Gemini with documents
       const result = await model.generateContent(contentParts);
       const response = result.response.text();
+
+      console.log('Gemini response received, length:', response?.length);
 
       // Clean up and format the response
       return this.formatGuidance(response);
