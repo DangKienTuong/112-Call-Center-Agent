@@ -59,38 +59,40 @@ async function routerNode(state) {
 
 /**
  * Determine the next step based on missing information
- * Priority order: location -> emergency -> phone -> people
+ * Priority order (updated flow):
+ * 1. Emergency type (tình hình thực trạng - what's happening)
+ * 2. First aid guidance (hướng dẫn xử lý ban đầu - after knowing the situation)
+ * 3. Location (địa chỉ cụ thể)
+ * 4. Phone (số điện thoại người báo cáo)
+ * 5. Affected people count
+ * 6. Confirmation
  */
 function determineNextStep(state) {
-  // Priority 1: Location (most important for emergency response)
-  if (!hasCompleteLocation(state.location)) {
-    return 'location';
-  }
-  
-  // Priority 2: Emergency type (need to know what to dispatch)
+  // Priority 1: Emergency type (must know what's happening first)
   if (!state.emergencyTypes || state.emergencyTypes.length === 0) {
     return 'emergency';
   }
-  
-  // Priority 3: Phone (need contact number)
+
+  // Priority 2: Show first aid guidance after knowing emergency type (only once)
+  if (!state.firstAidShown && state.emergencyTypes.length > 0) {
+    return 'firstAid';
+  }
+
+  // Priority 3: Location (where is the emergency)
+  if (!hasCompleteLocation(state.location)) {
+    return 'location';
+  }
+
+  // Priority 4: Phone (contact number for responders)
   if (!state.phone || state.phone.length < 9) {
     return 'phone';
   }
-  
-  // Priority 4: Affected people (need to know scale)
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'router.js:81',message:'Checking affectedPeople',data:{total:state.affectedPeople.total,injured:state.affectedPeople.injured,critical:state.affectedPeople.critical,checkResult:state.affectedPeople.total===0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
+
+  // Priority 5: Affected people (need to know scale)
   if (state.affectedPeople.total === 0) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'router.js:83',message:'total===0, routing to people',data:{willReturn:'people'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     return 'people';
   }
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'router.js:90',message:'All info collected, routing to confirm',data:{willReturn:'confirm'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
+
   // All info collected
   return 'confirm';
 }
@@ -136,14 +138,16 @@ Họ có đang xác nhận (đồng ý với thông tin) hay đang sửa/phản 
  */
 function routeToNextNode(state) {
   const step = state.currentStep;
-  
+
   console.log('[Router] Routing based on step:', step);
-  
+
   switch (step) {
-    case 'location':
-      return 'collectLocation';
     case 'emergency':
       return 'collectEmergency';
+    case 'firstAid':
+      return 'showFirstAidGuidance';
+    case 'location':
+      return 'collectLocation';
     case 'phone':
       return 'collectPhone';
     case 'people':
@@ -153,7 +157,7 @@ function routeToNextNode(state) {
     case 'complete':
       return 'createTicket';
     default:
-      return 'collectLocation'; // Default fallback
+      return 'collectEmergency'; // Default: ask about the situation first
   }
 }
 

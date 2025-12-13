@@ -61,6 +61,8 @@ exports.processMessage = async (req, res) => {
         }
         const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
         
+        // Note: First aid guidance was already shown earlier in the flow
+        // So we don't need to repeat it here, just show simple reminder
         const confirmationMessage = `✅ **PHIẾU KHẨN CẤP ${ticketData.ticketId} ĐÃ ĐƯỢC TẠO**
 
 📋 **Thông tin đã ghi nhận:**
@@ -71,10 +73,7 @@ exports.processMessage = async (req, res) => {
 
 🚨 **${forcesStr} đang được điều động đến ngay!**
 
----
-
-💡 **HƯỚNG DẪN XỬ LÝ BAN ĐẦU:**
-${result.firstAidGuidance || 'Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý.'}`;
+Vui lòng giữ bình tĩnh và thực hiện theo hướng dẫn đã cung cấp trong khi chờ lực lượng chức năng đến hỗ trợ.`;
         
         // Clear session after ticket creation
         await langgraphService.clearSession(sessionId);
@@ -269,7 +268,7 @@ exports.createTicketFromChat = async (req, res) => {
     if (ticketInfo.supportRequired?.rescue && !ticketInfo.supportRequired?.fireDepartment) forces.push('Cứu hộ');
     const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
 
-    // Build response message
+    // Build response message (first aid guidance was already shown earlier in flow)
     const confirmationMessage = `✅ **PHIẾU KHẨN CẤP ${ticketId} ĐÃ ĐƯỢC TẠO**
 
 📋 **Thông tin đã ghi nhận:**
@@ -280,10 +279,7 @@ exports.createTicketFromChat = async (req, res) => {
 
 🚨 **${forcesStr} đang được điều động đến ngay!**
 
----
-
-💡 **HƯỚNG DẪN XỬ LÝ BAN ĐẦU:**
-${firstAidGuidance}`;
+Vui lòng giữ bình tĩnh và thực hiện theo hướng dẫn đã cung cấp trong khi chờ lực lượng chức năng đến hỗ trợ.`;
 
     res.json({
       success: true,

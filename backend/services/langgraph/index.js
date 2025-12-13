@@ -3,11 +3,12 @@ const { MemorySaver } = require('@langchain/langgraph');
 const { EmergencyStateAnnotation } = require('./state');
 const { extractInfoNode } = require('./nodes/extractInfo');
 const { routerNode, routeToNextNode } = require('./nodes/router');
-const { 
-  collectLocationNode, 
-  collectEmergencyNode, 
-  collectPhoneNode, 
-  collectPeopleNode 
+const {
+  collectLocationNode,
+  collectEmergencyNode,
+  collectPhoneNode,
+  collectPeopleNode,
+  showFirstAidGuidanceNode
 } = require('./nodes/collectInfo');
 const { showConfirmationNode, createTicketNode } = require('./nodes/confirm');
 const { firstAidRagNode } = require('./nodes/firstAidRag');
@@ -29,8 +30,9 @@ const workflow = new StateGraph(EmergencyStateAnnotation);
 // Add all nodes to the graph
 workflow.addNode('extractInfo', extractInfoNode);
 workflow.addNode('router', routerNode);
-workflow.addNode('collectLocation', collectLocationNode);
 workflow.addNode('collectEmergency', collectEmergencyNode);
+workflow.addNode('showFirstAidGuidance', showFirstAidGuidanceNode);
+workflow.addNode('collectLocation', collectLocationNode);
 workflow.addNode('collectPhone', collectPhoneNode);
 workflow.addNode('collectPeople', collectPeopleNode);
 workflow.addNode('showConfirmation', showConfirmationNode);
@@ -45,12 +47,14 @@ workflow.setEntryPoint('extractInfo');
 workflow.addEdge('extractInfo', 'router');
 
 // Router decides which collection node to go to
+// New flow: emergency -> firstAid -> location -> phone -> people -> confirm
 workflow.addConditionalEdges(
   'router',
   routeToNextNode,
   {
-    collectLocation: 'collectLocation',
     collectEmergency: 'collectEmergency',
+    showFirstAidGuidance: 'showFirstAidGuidance',
+    collectLocation: 'collectLocation',
     collectPhone: 'collectPhone',
     collectPeople: 'collectPeople',
     showConfirmation: 'showConfirmation',
@@ -60,8 +64,9 @@ workflow.addConditionalEdges(
 
 // All collection nodes loop back to extractInfo
 // (waiting for user's next message with the requested info)
-workflow.addEdge('collectLocation', END);
 workflow.addEdge('collectEmergency', END);
+workflow.addEdge('showFirstAidGuidance', END);
+workflow.addEdge('collectLocation', END);
 workflow.addEdge('collectPhone', END);
 workflow.addEdge('collectPeople', END);
 

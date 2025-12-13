@@ -109,7 +109,13 @@ const EmergencyStateAnnotation = Annotation.Root({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => false,
   }),
-  
+
+  // Flag to track if first aid guidance has been shown (to avoid showing twice)
+  firstAidShown: Annotation({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
+
   userConfirmed: Annotation({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => false,
