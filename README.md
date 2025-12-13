@@ -5,7 +5,8 @@ A comprehensive web-based emergency response system for Vietnam's national emerg
 ## Features
 
 ### Core Features
-- **AI-Powered Chat Interface**: Intelligent emergency operator chatbot that collects information systematically
+- **AI-Powered Chat Interface**: LangGraph-based emergency operator chatbot that collects information systematically
+- **RAG System**: Retrieval-Augmented Generation with MongoDB for evidence-based first aid guidance
 - **Real-time Communication**: Socket.io integration for live updates and emergency notifications
 - **Ticket Management System**: Complete CRUD operations for emergency tickets
 - **PDF Generation**: Export emergency tickets as PDF documents
@@ -28,7 +29,9 @@ A comprehensive web-based emergency response system for Vietnam's national emerg
 - **MongoDB & Mongoose**: Database and ODM
 - **Socket.io**: Real-time bidirectional communication
 - **JWT**: Authentication and authorization
-- **OpenAI API**: AI-powered chat responses
+- **LangGraph**: AI workflow orchestration
+- **LangChain**: RAG pipeline and document processing
+- **OpenAI API**: Embeddings and LLM (GPT-4)
 - **PDFKit**: PDF document generation
 - **Bcrypt**: Password encryption
 - **Helmet & CORS**: Security middleware
@@ -90,7 +93,12 @@ net start MongoDB
 sudo systemctl start mongod
 ```
 
-6. Run the backend server:
+6. Index PDF documents for RAG (first time only):
+```bash
+npm run rag:index
+```
+
+7. Run the backend server:
 ```bash
 npm run dev
 ```
@@ -177,8 +185,21 @@ POST /api/chat/create-ticket - Create ticket from chat
 │   ├── controllers/      # Request handlers
 │   ├── middleware/       # Custom middleware
 │   ├── models/          # Database schemas
+│   │   ├── User.js
+│   │   ├── Ticket.js
+│   │   └── DocumentEmbedding.js  # RAG embeddings
 │   ├── routes/          # API routes
-│   ├── utils/           # Utility functions
+│   ├── scripts/         # Utility scripts
+│   │   ├── indexDocuments.js    # RAG indexing
+│   │   ├── testRag.js           # RAG testing
+│   │   └── seedUsers.js
+│   ├── services/        # Business logic
+│   │   └── langgraph/   # LangGraph AI workflow
+│   │       ├── index.js          # Graph definition
+│   │       ├── retriever.js      # RAG retriever
+│   │       ├── state.js          # State management
+│   │       ├── nodes/            # Graph nodes
+│   │       └── RAG_README.md     # RAG docs
 │   ├── server.js        # Entry point
 │   └── package.json     # Dependencies
 │
@@ -194,6 +215,10 @@ POST /api/chat/create-ticket - Create ticket from chat
 │   │   ├── App.js       # Main app component
 │   │   └── index.js     # Entry point
 │   └── package.json     # Dependencies
+│
+├── reference_document/  # PDF documents for RAG
+│   ├── Cam-nang-PCCC-trong-gia-dinh.pdf
+│   └── tai-lieu-so-cap-cuu.pdf
 │
 └── README.md           # Documentation
 ```
@@ -260,7 +285,46 @@ volumes:
   mongodb_data:
 ```
 
+## RAG System Management
+
+The application includes a powerful RAG (Retrieval-Augmented Generation) system for providing evidence-based first aid guidance. See [`backend/services/langgraph/RAG_README.md`](backend/services/langgraph/RAG_README.md) for detailed documentation.
+
+### Quick Start
+
+```bash
+cd backend
+
+# Index PDF documents (first time)
+npm run rag:index
+
+# View statistics
+npm run rag:stats
+
+# Test RAG system
+npm run rag:test
+
+# Re-index all documents (after updating PDFs)
+npm run rag:reindex
+
+# Clear all embeddings
+npm run rag:clear
+```
+
+### How It Works
+
+1. PDF documents in `reference_document/` are chunked and embedded using OpenAI embeddings
+2. Embeddings are stored persistently in MongoDB
+3. When a user reports an emergency, the system retrieves relevant document chunks
+4. LLM generates contextual first aid guidance based on retrieved documents
+5. Response includes specific instructions from official medical/fire safety documents
+
 ## Testing
+
+### RAG System Testing
+```bash
+cd backend
+npm run rag:test
+```
 
 ### Backend Testing
 ```bash

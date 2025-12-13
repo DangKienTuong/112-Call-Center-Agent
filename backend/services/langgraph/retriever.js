@@ -2,13 +2,16 @@ const { PDFLoader } = require('@langchain/community/document_loaders/fs/pdf');
 const { MemoryVectorStore } = require('langchain/vectorstores/memory');
 const { OpenAIEmbeddings } = require('@langchain/openai');
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
+const { Document } = require('@langchain/core/documents');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const DocumentEmbedding = require('../../models/DocumentEmbedding');
 
 /**
  * Document Retriever Service
  * Loads and indexes PDF documents for RAG-based first aid guidance
- * Replaces the OpenAI Assistants API from the old system
+ * Uses MongoDB for persistent storage of embeddings
  */
 
 class DocumentRetriever {
@@ -17,6 +20,17 @@ class DocumentRetriever {
     this.isInitialized = false;
     this.initPromise = null;
     this.documentMetadata = {};
+    this.embeddings = null;
+  }
+
+  /**
+   * Calculate hash of a file for change detection
+   */
+  _calculateFileHash(filePath) {
+    const fileBuffer = fs.readFileSync(filePath);
+    const hashSum = crypto.createHash('sha256');
+    hashSum.update(fileBuffer);
+    return hashSum.digest('hex');
   }
 
   /**
@@ -35,6 +49,207 @@ class DocumentRetriever {
     await this.initPromise;
   }
 
+  /**
+   * Load embeddings from MongoDB into MemoryVectorStore
+   */
+  async _loadFromMongoDB() {
+    try {
+      console.log('[Retriever] Loading embeddings from MongoDB...');
+
+      // Get all embeddings from MongoDB
+      const embeddingDocs = await DocumentEmbedding.find({}).lean();
+
+      if (embeddingDocs.length === 0) {
+        console.log('[Retriever] No embeddings found in MongoDB');
+        return false;
+      }
+
+      console.log(`[Retriever] Found ${embeddingDocs.length} embeddings in MongoDB`);
+
+      // Initialize embeddings instance if not already done
+      if (!this.embeddings) {
+        this.embeddings = new OpenAIEmbeddings({
+          openAIApiKey: process.env.OPENAI_API_KEY,
+          modelName: 'text-embedding-3-small',
+        });
+      }
+
+      // Convert MongoDB documents to LangChain Document format
+      const documents = embeddingDocs.map(doc => new Document({
+        pageContent: doc.content,
+        metadata: doc.metadata,
+      }));
+
+      // Extract embeddings array
+      const embeddings = embeddingDocs.map(doc => doc.embedding);
+
+      // Create MemoryVectorStore and manually add the vectors
+      this.vectorStore = new MemoryVectorStore(this.embeddings);
+      
+      // Add existing vectors directly to the store
+      for (let i = 0; i < documents.length; i++) {
+        this.vectorStore.memoryVectors.push({
+          content: documents[i].pageContent,
+          embedding: embeddings[i],
+          metadata: documents[i].metadata,
+        });
+      }
+
+      // Build metadata summary
+      const stats = await DocumentEmbedding.getStats();
+      stats.forEach(stat => {
+        this.documentMetadata[stat.type] = {
+          loaded: true,
+          chunkCount: stat.chunkCount,
+          documentCount: stat.documentCount,
+        };
+      });
+
+      console.log('[Retriever] ✓ Loaded embeddings from MongoDB into VectorStore');
+      console.log('[Retriever] Stats:', this.documentMetadata);
+
+      return true;
+
+    } catch (error) {
+      console.error('[Retriever] Error loading from MongoDB:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Index PDF documents into MongoDB
+   */
+  async _indexDocuments() {
+    try {
+      console.log('[Retriever] Starting document indexing...');
+
+      const documentsPath = path.join(__dirname, '../../../reference_document');
+      console.log('[Retriever] Looking for documents in:', documentsPath);
+
+      // Initialize embeddings
+      this.embeddings = new OpenAIEmbeddings({
+        openAIApiKey: process.env.OPENAI_API_KEY,
+        modelName: 'text-embedding-3-small',
+      });
+
+      // Text splitter with optimized settings for Vietnamese medical documents
+      const textSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 1000,
+        chunkOverlap: 200,
+      });
+
+      const documentsToIndex = [
+        {
+          path: path.join(documentsPath, 'Cam-nang-PCCC-trong-gia-dinh.pdf'),
+          type: 'FIRE_RESCUE',
+          name: 'Cẩm nang PCCC trong gia đình',
+        },
+        {
+          path: path.join(documentsPath, 'tai-lieu-so-cap-cuu.pdf'),
+          type: 'MEDICAL',
+          name: 'Tài liệu sơ cấp cứu',
+        }
+      ];
+
+      let totalIndexed = 0;
+
+      for (const docInfo of documentsToIndex) {
+        if (!fs.existsSync(docInfo.path)) {
+          console.warn(`[Retriever] ✗ Document not found: ${docInfo.path}`);
+          continue;
+        }
+
+        try {
+          // Calculate file hash
+          const fileHash = this._calculateFileHash(docInfo.path);
+          
+          // Check if already indexed
+          const isIndexed = await DocumentEmbedding.isIndexed(fileHash);
+          
+          if (isIndexed) {
+            console.log(`[Retriever] ✓ ${docInfo.name} already indexed (hash: ${fileHash.substring(0, 8)}...)`);
+            const count = await DocumentEmbedding.countDocuments({ documentHash: fileHash });
+            this.documentMetadata[docInfo.type] = {
+              path: docInfo.path,
+              name: docInfo.name,
+              loaded: true,
+              chunkCount: count,
+              hash: fileHash,
+            };
+            continue;
+          }
+
+          console.log(`[Retriever] Indexing ${docInfo.name}...`);
+
+          // Load PDF
+          const loader = new PDFLoader(docInfo.path);
+          const docs = await loader.load();
+          console.log(`[Retriever]   Loaded ${docs.length} pages`);
+
+          // Add metadata
+          docs.forEach(doc => {
+            doc.metadata = {
+              ...doc.metadata,
+              source: docInfo.name,
+              type: docInfo.type,
+            };
+          });
+
+          // Split into chunks
+          const splitDocs = await textSplitter.splitDocuments(docs);
+          console.log(`[Retriever]   Created ${splitDocs.length} chunks`);
+
+          // Generate embeddings
+          console.log(`[Retriever]   Generating embeddings...`);
+          const texts = splitDocs.map(doc => doc.pageContent);
+          const embeddings = await this.embeddings.embedDocuments(texts);
+          console.log(`[Retriever]   Generated ${embeddings.length} embeddings`);
+
+          // Save to MongoDB
+          console.log(`[Retriever]   Saving to MongoDB...`);
+          const embeddingDocs = splitDocs.map((doc, idx) => ({
+            content: doc.pageContent,
+            embedding: embeddings[idx],
+            metadata: {
+              source: doc.metadata.source,
+              type: doc.metadata.type,
+              page: doc.metadata.loc?.pageNumber,
+              chunkIndex: idx,
+              pdf: {
+                totalPages: doc.metadata.pdf?.totalPages,
+                info: doc.metadata.pdf?.info,
+              }
+            },
+            documentHash: fileHash,
+          }));
+
+          await DocumentEmbedding.insertMany(embeddingDocs);
+          console.log(`[Retriever] ✓ ${docInfo.name} indexed successfully (${embeddingDocs.length} chunks)`);
+
+          this.documentMetadata[docInfo.type] = {
+            path: docInfo.path,
+            name: docInfo.name,
+            loaded: true,
+            chunkCount: embeddingDocs.length,
+            hash: fileHash,
+          };
+
+          totalIndexed += embeddingDocs.length;
+
+        } catch (err) {
+          console.error(`[Retriever] ✗ Error indexing ${docInfo.name}:`, err.message);
+        }
+      }
+
+      console.log(`[Retriever] ✓ Indexing complete. Total chunks indexed: ${totalIndexed}`);
+      return totalIndexed > 0;
+
+    } catch (error) {
+      console.error('[Retriever] Error indexing documents:', error);
+      return false;
+    }
+  }
+
   async _loadAndIndexDocuments() {
     try {
       console.log('[Retriever] Initializing document retriever...');
@@ -46,100 +261,22 @@ class DocumentRetriever {
         return;
       }
 
-      const documentsPath = path.join(__dirname, '../../../reference_document');
-      console.log('[Retriever] Looking for documents in:', documentsPath);
+      // Try to load from MongoDB first
+      const loadedFromDB = await this._loadFromMongoDB();
 
-      const allDocuments = [];
-
-      // Load PCCC (Fire/Rescue) document
-      const pcccPath = path.join(documentsPath, 'Cam-nang-PCCC-trong-gia-dinh.pdf');
-      if (fs.existsSync(pcccPath)) {
-        try {
-          console.log('[Retriever] Loading PCCC document...');
-          const loader = new PDFLoader(pcccPath);
-          const docs = await loader.load();
-          
-          // Add metadata to identify document type
-          docs.forEach(doc => {
-            doc.metadata = {
-              ...doc.metadata,
-              source: 'Cẩm nang PCCC trong gia đình',
-              type: 'FIRE_RESCUE',
-            };
-          });
-          
-          allDocuments.push(...docs);
-          this.documentMetadata['FIRE_RESCUE'] = {
-            path: pcccPath,
-            name: 'Cẩm nang PCCC trong gia đình',
-            loaded: true,
-            documentCount: docs.length,
-          };
-          console.log(`[Retriever] ✓ Loaded ${docs.length} pages from PCCC document`);
-        } catch (err) {
-          console.error('[Retriever] ✗ Error loading PCCC document:', err.message);
-        }
+      if (loadedFromDB) {
+        console.log('[Retriever] ✓ Loaded from MongoDB successfully');
       } else {
-        console.warn('[Retriever] ✗ PCCC document not found at:', pcccPath);
-      }
-
-      // Load Medical/First Aid document
-      const medicalPath = path.join(documentsPath, 'tai-lieu-so-cap-cuu.pdf');
-      if (fs.existsSync(medicalPath)) {
-        try {
-          console.log('[Retriever] Loading Medical document...');
-          const loader = new PDFLoader(medicalPath);
-          const docs = await loader.load();
-          
-          // Add metadata to identify document type
-          docs.forEach(doc => {
-            doc.metadata = {
-              ...doc.metadata,
-              source: 'Tài liệu sơ cấp cứu',
-              type: 'MEDICAL',
-            };
-          });
-          
-          allDocuments.push(...docs);
-          this.documentMetadata['MEDICAL'] = {
-            path: medicalPath,
-            name: 'Tài liệu sơ cấp cứu',
-            loaded: true,
-            documentCount: docs.length,
-          };
-          console.log(`[Retriever] ✓ Loaded ${docs.length} pages from Medical document`);
-        } catch (err) {
-          console.error('[Retriever] ✗ Error loading Medical document:', err.message);
+        console.log('[Retriever] MongoDB empty, indexing documents...');
+        const indexed = await this._indexDocuments();
+        
+        if (indexed) {
+          // Load the newly indexed documents
+          await this._loadFromMongoDB();
+        } else {
+          console.warn('[Retriever] No documents indexed. RAG will not be available.');
         }
-      } else {
-        console.warn('[Retriever] ✗ Medical document not found at:', medicalPath);
       }
-
-      if (allDocuments.length === 0) {
-        console.warn('[Retriever] No documents loaded. RAG will not be available.');
-        this.isInitialized = true;
-        return;
-      }
-
-      // Split documents into chunks
-      console.log('[Retriever] Splitting documents into chunks...');
-      const textSplitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 200,
-      });
-      const splitDocs = await textSplitter.splitDocuments(allDocuments);
-      console.log(`[Retriever] Created ${splitDocs.length} chunks from ${allDocuments.length} documents`);
-
-      // Create vector store with embeddings
-      console.log('[Retriever] Creating vector store with embeddings...');
-      const embeddings = new OpenAIEmbeddings({
-        openAIApiKey: process.env.OPENAI_API_KEY,
-      });
-
-      this.vectorStore = await MemoryVectorStore.fromDocuments(
-        splitDocs,
-        embeddings
-      );
 
       this.isInitialized = true;
       console.log('[Retriever] ✓ Document retriever initialized successfully');
@@ -166,7 +303,7 @@ class DocumentRetriever {
     }
 
     try {
-      console.log('[Retriever] Retrieving documents for query:', query);
+      console.log('[Retriever] Retrieving documents for query:', query.substring(0, 100) + '...');
       console.log('[Retriever] Filtering by types:', emergencyTypes);
 
       // Retrieve documents
@@ -193,6 +330,34 @@ class DocumentRetriever {
   }
 
   /**
+   * Force re-index all documents (useful for updates)
+   */
+  async reindexAll() {
+    console.log('[Retriever] Starting full re-index...');
+    
+    try {
+      // Clear all existing embeddings
+      await DocumentEmbedding.deleteMany({});
+      console.log('[Retriever] Cleared existing embeddings');
+
+      // Reset state
+      this.vectorStore = null;
+      this.documentMetadata = {};
+
+      // Re-index
+      await this._indexDocuments();
+      await this._loadFromMongoDB();
+
+      console.log('[Retriever] ✓ Re-index complete');
+      return true;
+
+    } catch (error) {
+      console.error('[Retriever] Error during re-index:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get retriever status
    */
   getStatus() {
@@ -208,4 +373,3 @@ class DocumentRetriever {
 const retriever = new DocumentRetriever();
 
 module.exports = retriever;
-

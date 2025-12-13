@@ -90,6 +90,27 @@ async function extractInfoNode(state) {
         affectedUpdate.critical = extracted.affectedPeople.critical;
       }
       
+      // Auto-calculate total if not explicitly provided
+      // This prevents infinite loop where router checks total === 0
+      if (affectedUpdate.total === undefined && (affectedUpdate.injured !== undefined || affectedUpdate.critical !== undefined)) {
+        const currentTotal = state.affectedPeople.total || 0;
+        const currentInjured = state.affectedPeople.injured || 0;
+        const currentCritical = state.affectedPeople.critical || 0;
+        
+        const newInjured = affectedUpdate.injured !== undefined ? affectedUpdate.injured : currentInjured;
+        const newCritical = affectedUpdate.critical !== undefined ? affectedUpdate.critical : currentCritical;
+        
+        // If total was 0 and we now have injured/critical, set total to their sum
+        // Otherwise, keep existing total
+        if (currentTotal === 0) {
+          affectedUpdate.total = newInjured + newCritical;
+        }
+      }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'extractInfo.js:95',message:'Extracted affectedPeople (FIXED)',data:{extracted:extracted.affectedPeople,affectedUpdate:affectedUpdate,hasTotal:affectedUpdate.total!==undefined,hasInjured:affectedUpdate.injured!==undefined,hasCritical:affectedUpdate.critical!==undefined,calculatedTotal:affectedUpdate.total},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3-FIX'})}).catch(()=>{});
+      // #endregion
+      
       if (Object.keys(affectedUpdate).length > 0) {
         updates.affectedPeople = affectedUpdate;
       }
@@ -199,4 +220,3 @@ module.exports = {
   extractInfoNode,
   fallbackExtraction,
 };
-

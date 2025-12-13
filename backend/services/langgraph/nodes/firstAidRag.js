@@ -10,7 +10,6 @@ const retriever = require('../retriever');
 async function firstAidRagNode(state) {
   console.log('[FirstAidRAG] Generating first aid guidance');
   console.log('[FirstAidRAG] Emergency types:', state.emergencyTypes);
-  console.log('[FirstAidRAG] Description:', state.description);
 
   // Wait for retriever initialization
   await retriever.initialize();
@@ -44,8 +43,21 @@ async function firstAidRagNode(state) {
       .map(t => emergencyTypeMap[t] || '')
       .join(' ');
     
-    const query = `${state.description || ''} ${typeKeywords}`.trim();
-    console.log('[FirstAidRAG] Search query:', query);
+    // Build context from ALL user messages (short-term memory)
+    // This captures the full situation description from the conversation
+    // Filter out short confirmation words like "đúng", "xác nhận", etc.
+    const userMessages = (state.messages || [])
+      .filter(m => m.role === 'reporter')
+      .map(m => m.message)
+      .filter(msg => msg && msg.length > 10) // Filter out short confirmations
+      .join(' ');
+    
+    // ALWAYS use userMessages as primary context (short-term memory)
+    // This ensures we capture the actual emergency description from conversation
+    const situationDescription = userMessages || state.description || '';
+    
+    const query = `${situationDescription} ${typeKeywords}`.trim();
+    console.log('[FirstAidRAG] Search query:', query.substring(0, 100) + '...');
 
     // Retrieve relevant documents
     const relevantDocs = await retriever.retrieve(query, state.emergencyTypes, 3);
@@ -74,7 +86,7 @@ async function firstAidRagNode(state) {
 
 **TÌNH HUỐNG:**
 Loại: ${state.emergencyTypes.join(', ')}
-Mô tả: ${state.description || 'Không có mô tả chi tiết'}
+Mô tả: ${situationDescription || 'Không có mô tả chi tiết'}
 
 **TÀI LIỆU THAM KHẢO:**
 ${context}
@@ -119,4 +131,3 @@ Hãy cung cấp hướng dẫn xử lý ban đầu:`;
 module.exports = {
   firstAidRagNode,
 };
-

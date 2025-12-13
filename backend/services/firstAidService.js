@@ -11,15 +11,17 @@ class FirstAidService {
     this.isInitialized = false;
     this.initPromise = null;
 
-    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
-      this.openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-      // Store the promise so we can await it later
-      this.initPromise = this.initializeDocuments();
-    } else {
-      console.warn('OpenAI API key not configured. First aid guidance will not be available.');
-    }
+    // DEPRECATED: This service is replaced by LangGraph RAG (services/langgraph/retriever.js)
+    // Keeping for backwards compatibility but NOT auto-initializing
+    console.log('[FirstAidService] DEPRECATED - Use LangGraph RAG instead');
+    
+    // Disabled auto-initialization - now using LangGraph RAG
+    // if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
+    //   this.openai = new OpenAI({
+    //     apiKey: process.env.OPENAI_API_KEY,
+    //   });
+    //   this.initPromise = this.initializeDocuments();
+    // }
   }
 
   // Initialize and upload reference documents
@@ -116,7 +118,14 @@ class FirstAidService {
 
   // Get first aid guidance based on emergency types and description
   // emergencyTypes can be a string or array of types
+  // DEPRECATED: This method is replaced by LangGraph RAG (firstAidRagNode)
   async getFirstAidGuidance(emergencyTypes, description) {
+    // DEPRECATED - return default message
+    // The new LangGraph RAG system handles first aid guidance via firstAidRagNode
+    console.log('[FirstAidService] DEPRECATED - getFirstAidGuidance called, returning default');
+    return this.getNoGuidanceMessage();
+    
+    /* OLD CODE - DISABLED
     // Wait for documents to be uploaded
     await this.waitForInit();
 
@@ -129,6 +138,7 @@ class FirstAidService {
       console.log('OpenAI not configured or assistant not initialized');
       return this.getNoGuidanceMessage();
     }
+    */
 
     try {
       // Check which document types are relevant

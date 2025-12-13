@@ -78,10 +78,19 @@ function determineNextStep(state) {
   }
   
   // Priority 4: Affected people (need to know scale)
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'router.js:81',message:'Checking affectedPeople',data:{total:state.affectedPeople.total,injured:state.affectedPeople.injured,critical:state.affectedPeople.critical,checkResult:state.affectedPeople.total===0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
   if (state.affectedPeople.total === 0) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'router.js:83',message:'total===0, routing to people',data:{willReturn:'people'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     return 'people';
   }
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'router.js:90',message:'All info collected, routing to confirm',data:{willReturn:'confirm'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
   // All info collected
   return 'confirm';
 }
