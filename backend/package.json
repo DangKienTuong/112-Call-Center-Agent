@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "font:download": "node scripts/downloadFont.js",
     "rag:index": "node scripts/indexDocuments.js",
     "rag:reindex": "node scripts/indexDocuments.js --force",
     "rag:stats": "node scripts/indexDocuments.js --stats",

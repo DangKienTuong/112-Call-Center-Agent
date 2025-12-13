@@ -286,16 +286,31 @@ async function completeSessionWithTicket(sessionId, ticketId, ticketData, userId
  */
 async function getUserChatHistory(userId, limit = 10) {
   try {
+    const Ticket = require('../../models/Ticket');
+    
     const sessions = await ChatSession.find({ userId })
       .sort({ createdAt: -1 })
       .limit(limit)
       .select('sessionId status ticketId messages createdAt updatedAt')
       .lean();
 
+    // Get ticket _ids for sessions that have tickets
+    const ticketIds = sessions.map(s => s.ticketId).filter(Boolean);
+    const tickets = await Ticket.find({ ticketId: { $in: ticketIds } })
+      .select('_id ticketId')
+      .lean();
+
+    // Create a map of ticketId to _id
+    const ticketIdToMongoId = {};
+    tickets.forEach(t => {
+      ticketIdToMongoId[t.ticketId] = t._id;
+    });
+
     return sessions.map(session => ({
       sessionId: session.sessionId,
       status: session.status,
       ticketId: session.ticketId,
+      ticketMongoId: session.ticketId ? ticketIdToMongoId[session.ticketId] : null,
       messageCount: session.messages?.length || 0,
       lastMessage: session.messages?.[session.messages.length - 1]?.message,
       createdAt: session.createdAt,

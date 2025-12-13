@@ -511,7 +511,7 @@ exports.getTicketHistory = async (req, res) => {
     // Also get full ticket details from Ticket model for active tickets
     const ticketIds = tickets.map(t => t.ticketId);
     const fullTickets = await Ticket.find({ ticketId: { $in: ticketIds } })
-      .select('ticketId status emergencyTypes location description createdAt updatedAt')
+      .select('_id ticketId status emergencyTypes location description createdAt updatedAt')
       .lean();
 
     // Merge ticket details
@@ -519,6 +519,7 @@ exports.getTicketHistory = async (req, res) => {
       const fullTicket = fullTickets.find(ft => ft.ticketId === t.ticketId);
       return {
         ...t,
+        _id: fullTicket?._id, // Add MongoDB _id for navigation
         currentStatus: fullTicket?.status || t.status,
         updatedAt: fullTicket?.updatedAt || t.createdAt
       };

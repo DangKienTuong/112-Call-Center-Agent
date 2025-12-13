@@ -22,8 +22,8 @@ router.get('/', ticketController.getTickets);
 // Create ticket (admin/staff only)
 router.post('/', isAdminOrStaff, ticketController.createTicket);
 
-// Generate PDF - accessible by admin and staff (before /:id to avoid conflict)
-router.get('/:id/pdf', isAdminOrStaff, ticketController.generatePDF);
+// Generate PDF - accessible by ticket owner, admin and staff (before /:id to avoid conflict)
+router.get('/:id/pdf', ticketController.generatePDF);
 
 // Update ticket status only - accessible by admin and staff
 router.patch('/:id/status', isAdminOrStaff, ticketController.updateTicketStatus);

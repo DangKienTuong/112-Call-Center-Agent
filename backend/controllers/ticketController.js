@@ -301,8 +301,19 @@ exports.addChatMessage = async (req, res) => {
 // Generate PDF ticket
 exports.generatePDF = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id)
-      .populate('assignedOperator', 'username profile.fullName');
+    const { id } = req.params;
+    let ticket;
+
+    // Check if id looks like a ticketId (TD-...) or MongoDB ObjectId
+    if (id.startsWith('TD-')) {
+      // Search by ticketId field
+      ticket = await Ticket.findOne({ ticketId: id })
+        .populate('assignedOperator', 'username profile.fullName');
+    } else {
+      // Try as MongoDB ObjectId
+      ticket = await Ticket.findById(id)
+        .populate('assignedOperator', 'username profile.fullName');
+    }
 
     if (!ticket) {
       return res.status(404).json({
@@ -311,53 +322,136 @@ exports.generatePDF = async (req, res) => {
       });
     }
 
-    const doc = new PDFDocument();
+    // If user is a reporter, verify they own this ticket
+    if (req.user && req.user.role === 'reporter') {
+      const userPhone = req.user.profile?.phone;
+      if (!userPhone || ticket.reporter?.phone !== userPhone) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only download PDF for your own tickets.'
+        });
+      }
+    }
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 50
+    });
     const filename = `ticket_${ticket.ticketId}.pdf`;
 
+    // Try to register a font that supports Vietnamese
+    // Try multiple font sources in order of preference
+    const fontPaths = [
+      path.join(__dirname, '../fonts/Roboto-Regular.ttf'),  // Custom font in project
+      'C:\\Windows\\Fonts\\arial.ttf',                       // Windows Arial
+      'C:\\Windows\\Fonts\\times.ttf',                       // Windows Times New Roman
+      '/System/Library/Fonts/Supplemental/Arial.ttf',       // macOS Arial
+      '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'     // Linux DejaVu
+    ];
+
+    let fontLoaded = false;
+    for (const fontPath of fontPaths) {
+      try {
+        if (fs.existsSync(fontPath)) {
+          doc.registerFont('Vietnamese', fontPath);
+          doc.font('Vietnamese');
+          fontLoaded = true;
+          console.log(`Loaded font from: ${fontPath}`);
+          break;
+        }
+      } catch (err) {
+        // Continue to next font
+      }
+    }
+    
+    if (!fontLoaded) {
+      console.warn('Could not load any Vietnamese-compatible font, using default (may not display Vietnamese correctly)');
+    }
+
+    // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-cache');
 
+    // Pipe PDF to response
     doc.pipe(res);
 
-    // Add content to PDF
-    doc.fontSize(20).text('EMERGENCY REQUEST TICKET - HOTLINE 112', 50, 50);
-    doc.fontSize(12).text(`Ticket ID: ${ticket.ticketId}`, 50, 100);
-    doc.text(`Created: ${ticket.createdAt.toLocaleString('vi-VN')}`, 50, 120);
-    doc.text(`Status: ${ticket.status}`, 50, 140);
-    doc.text(`Priority: ${ticket.priority}`, 50, 160);
+    // Handle pipe errors
+    doc.on('error', (err) => {
+      console.error('PDF generation error:', err);
+    });
 
-    doc.fontSize(14).text('1. REPORTER INFORMATION:', 50, 200);
-    doc.fontSize(12).text(`Name: ${ticket.reporter.name}`, 70, 220);
-    doc.text(`Phone: ${ticket.reporter.phone}`, 70, 240);
-    doc.text(`Email: ${ticket.reporter.email || 'N/A'}`, 70, 260);
+    // Add content to PDF with better formatting
+    doc.fontSize(20).text('PHIẾU BÁO CÁO SỰ CỐ KHẨN CẤP - HOTLINE 112', {
+      align: 'center'
+    });
+    doc.moveDown();
 
-    doc.fontSize(14).text('2. INCIDENT LOCATION:', 50, 300);
-    doc.fontSize(12).text(`Address: ${ticket.location.address}`, 70, 320);
+    doc.fontSize(12);
+    doc.text(`Mã phiếu: ${ticket.ticketId}`, 50, 100);
+    doc.text(`Ngày tạo: ${new Date(ticket.createdAt).toLocaleString('vi-VN')}`, 50, 120);
+    doc.text(`Trạng thái: ${ticket.status}`, 50, 140);
+    doc.text(`Độ ưu tiên: ${ticket.priority}`, 50, 160);
+    doc.moveDown(2);
 
-    doc.fontSize(14).text('3. EMERGENCY TYPE:', 50, 360);
-    doc.fontSize(12).text(ticket.emergencyType, 70, 380);
+    doc.fontSize(14).text('1. THÔNG TIN NGƯỜI BÁO CÁO:', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+    doc.text(`Tên: ${ticket.reporter?.name || 'N/A'}`, 70);
+    doc.text(`Số điện thoại: ${ticket.reporter?.phone || 'N/A'}`, 70);
+    doc.text(`Email: ${ticket.reporter?.email || 'N/A'}`, 70);
+    doc.moveDown(1.5);
 
-    doc.fontSize(14).text('4. SITUATION DESCRIPTION:', 50, 420);
-    doc.fontSize(12).text(ticket.description, 70, 440, { width: 400 });
+    doc.fontSize(14).text('2. VỊ TRÍ SỰ CỐ:', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+    doc.text(`Địa chỉ: ${ticket.location?.address || 'N/A'}`, 70);
+    if (ticket.location?.district) {
+      doc.text(`${ticket.location.ward || ''}, ${ticket.location.district}, ${ticket.location.city}`, 70);
+    }
+    doc.moveDown(1.5);
 
-    doc.fontSize(14).text('5. AFFECTED PEOPLE:', 50, 520);
-    doc.fontSize(12).text(`Total: ${ticket.affectedPeople.total} | Status: ${ticket.affectedPeople.status || 'Unknown'}`, 70, 540);
+    doc.fontSize(14).text('3. LOẠI SỰ CỐ:', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+    const typeMap = {
+      'FIRE_RESCUE': 'Phòng cháy chữa cháy và Cứu nạn cứu hộ',
+      'MEDICAL': 'Cấp cứu y tế',
+      'SECURITY': 'An ninh trật tự'
+    };
+    doc.text(typeMap[ticket.emergencyType] || ticket.emergencyType, 70);
+    doc.moveDown(1.5);
 
-    doc.fontSize(14).text('6. SUPPORT REQUIRED:', 50, 580);
+    doc.fontSize(14).text('4. MÔ TẢ TÌNH HUỐNG:', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+    doc.text(ticket.description || 'N/A', 70, doc.y, { width: 450 });
+    doc.moveDown(1.5);
+
+    doc.fontSize(14).text('5. SỐ NGƯỜI BỊ ẢNH HƯỞNG:', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+    doc.text(`Tổng số: ${ticket.affectedPeople?.total || 0}`, 70);
+    doc.text(`Bị thương: ${ticket.affectedPeople?.injured || 0}`, 70);
+    doc.text(`Nguy kịch: ${ticket.affectedPeople?.critical || 0}`, 70);
+    doc.text(`Tử vong: ${ticket.affectedPeople?.deceased || 0}`, 70);
+    doc.moveDown(1.5);
+
+    doc.fontSize(14).text('6. HỖ TRỢ YÊU CẦU:', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
     const support = [];
-    if (ticket.supportRequired.police) support.push('Police');
-    if (ticket.supportRequired.ambulance) support.push('Ambulance');
-    if (ticket.supportRequired.fireDepartment) support.push('Fire Department');
-    if (ticket.supportRequired.rescue) support.push('Rescue Team');
-    doc.fontSize(12).text(support.join(', ') || 'None specified', 70, 600);
+    if (ticket.supportRequired?.police) support.push('Công an');
+    if (ticket.supportRequired?.ambulance) support.push('Xe cấp cứu');
+    if (ticket.supportRequired?.fireDepartment) support.push('Phòng cháy chữa cháy');
+    if (ticket.supportRequired?.rescue) support.push('Cứu hộ');
+    doc.text(support.length > 0 ? support.join(', ') : 'Không có yêu cầu cụ thể', 70);
 
     doc.end();
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate PDF',
-      error: error.message
-    });
+    console.error('Error generating PDF:', error);
+    // Only send JSON if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate PDF',
+        error: error.message
+      });
+    }
   }
 };
 

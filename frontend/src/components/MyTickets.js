@@ -154,7 +154,8 @@ function MyTickets({ compact = false }) {
                 <React.Fragment key={ticket.ticketId}>
                   <ListItem
                     button
-                    onClick={() => navigate(`/tickets/${ticket.ticketId}`)}
+                    onClick={() => ticket._id && navigate(`/tickets/${ticket._id}`)}
+                    disabled={!ticket._id}
                   >
                     <ListItemIcon>
                       {getEmergencyIcon(ticket.emergencyTypes)}
@@ -181,7 +182,7 @@ function MyTickets({ compact = false }) {
                       }
                     />
 
-                    <IconButton size="small">
+                    <IconButton size="small" disabled={!ticket._id}>
                       <OpenInNew fontSize="small" />
                     </IconButton>
                   </ListItem>

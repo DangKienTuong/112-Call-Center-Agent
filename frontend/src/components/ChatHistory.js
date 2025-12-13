@@ -156,6 +156,7 @@ function ChatHistory({ onSelectSession }) {
               </ListItemIcon>
 
               <ListItemText
+                sx={{ pr: 20 }}
                 primary={
                   <Typography variant="body2" noWrap>
                     {session.lastMessage || t('chat.conversation')}
@@ -178,11 +179,11 @@ function ChatHistory({ onSelectSession }) {
               <ListItemSecondaryAction>
                 <Box display="flex" alignItems="center" gap={1}>
                   {getStatusChip(session.status, session.ticketId)}
-                  {session.ticketId && (
+                  {session.ticketMongoId && (
                     <Tooltip title={t('chat.viewTicket')}>
                       <IconButton
                         size="small"
-                        href={`/tickets/${session.ticketId}`}
+                        href={`/tickets/${session.ticketMongoId}`}
                       >
                         <OpenInNew fontSize="small" />
                       </IconButton>
