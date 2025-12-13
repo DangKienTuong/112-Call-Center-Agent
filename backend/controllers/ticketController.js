@@ -51,6 +51,24 @@ exports.getTickets = async (req, res) => {
 
     const query = {};
 
+    // If user is a reporter, only show their own tickets
+    if (req.user && req.user.role === 'reporter') {
+      // Match by reporter phone (from user profile)
+      const userPhone = req.user.profile?.phone;
+      if (userPhone) {
+        query['reporter.phone'] = userPhone;
+      } else {
+        // No phone associated, return empty
+        return res.json({
+          success: true,
+          data: [],
+          totalPages: 0,
+          currentPage: page,
+          totalTickets: 0
+        });
+      }
+    }
+
     if (status) query.status = status;
     if (emergencyType) query.emergencyType = emergencyType;
     if (priority) query.priority = priority;
@@ -85,17 +103,39 @@ exports.getTickets = async (req, res) => {
   }
 };
 
-// Get single ticket
+// Get single ticket (supports both MongoDB _id and ticketId string)
 exports.getTicket = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id)
-      .populate('assignedOperator', 'username profile.fullName');
+    const { id } = req.params;
+    let ticket;
+
+    // Check if id looks like a ticketId (TD-...) or MongoDB ObjectId
+    if (id.startsWith('TD-')) {
+      // Search by ticketId field
+      ticket = await Ticket.findOne({ ticketId: id })
+        .populate('assignedOperator', 'username profile.fullName');
+    } else {
+      // Try as MongoDB ObjectId
+      ticket = await Ticket.findById(id)
+        .populate('assignedOperator', 'username profile.fullName');
+    }
 
     if (!ticket) {
       return res.status(404).json({
         success: false,
         message: 'Ticket not found'
       });
+    }
+
+    // If user is a reporter, verify they own this ticket
+    if (req.user && req.user.role === 'reporter') {
+      const userPhone = req.user.profile?.phone;
+      if (!userPhone || ticket.reporter?.phone !== userPhone) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view your own tickets.'
+        });
+      }
     }
 
     res.json({

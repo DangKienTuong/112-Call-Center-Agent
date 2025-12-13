@@ -111,11 +111,15 @@ userMemorySchema.statics.getOrCreate = async function(userId) {
   let memory = await this.findOne({ userId });
 
   if (!memory) {
+    // Get user's profile data to initialize memory
+    const User = mongoose.model('User');
+    const user = await User.findById(userId).select('profile username').lean();
+
     memory = new this({
       userId,
       savedInfo: {
-        phone: null,
-        fullName: null,
+        phone: user?.profile?.phone || null,
+        fullName: user?.profile?.fullName || null,
         commonLocations: []
       },
       ticketHistory: [],
@@ -125,6 +129,17 @@ userMemorySchema.statics.getOrCreate = async function(userId) {
       }
     });
     await memory.save();
+  } else if (!memory.savedInfo.phone) {
+    // If memory exists but phone is not set, try to get from user profile
+    const User = mongoose.model('User');
+    const user = await User.findById(userId).select('profile').lean();
+    if (user?.profile?.phone) {
+      memory.savedInfo.phone = user.profile.phone;
+      if (user.profile.fullName) {
+        memory.savedInfo.fullName = user.profile.fullName;
+      }
+      await memory.save();
+    }
   }
 
   return memory;

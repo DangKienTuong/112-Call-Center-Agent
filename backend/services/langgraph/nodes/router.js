@@ -73,7 +73,7 @@ async function routerNode(state) {
  * 1. Emergency type (tình hình thực trạng - what's happening)
  * 2. First aid guidance (hướng dẫn xử lý ban đầu - after knowing the situation)
  * 3. Location (địa chỉ cụ thể)
- * 4. Phone (số điện thoại người báo cáo)
+ * 4. Phone (số điện thoại người báo cáo) - skip if authenticated user has phone
  * 5. Affected people count
  * 6. Confirmation
  */
@@ -94,7 +94,11 @@ function determineNextStep(state) {
   }
 
   // Priority 4: Phone (contact number for responders)
-  if (!state.phone || state.phone.length < 9) {
+  // Skip if authenticated user has phone from userMemory
+  const hasPhoneFromMemory = state.isAuthenticated && state.userMemory?.savedPhone;
+  const hasValidPhone = state.phone && state.phone.length >= 9;
+
+  if (!hasValidPhone && !hasPhoneFromMemory) {
     return 'phone';
   }
 

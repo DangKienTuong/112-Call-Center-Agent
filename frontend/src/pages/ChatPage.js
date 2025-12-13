@@ -167,6 +167,55 @@ function ChatPage() {
     }
   };
 
+  // Load a previous chat session
+  const handleLoadSession = async (session) => {
+    if (!session || !session.sessionId) {
+      toast.error(t('chat.errorLoadingHistory'));
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await chatService.getSessionDetails(session.sessionId);
+      const sessionData = response.data.data;
+
+      if (sessionData && sessionData.messages && sessionData.messages.length > 0) {
+        // Set session ID to the loaded session
+        setSessionId(session.sessionId);
+
+        // Load all messages from the session
+        const loadedMessages = sessionData.messages.map(msg => ({
+          role: msg.role,
+          message: msg.message,
+          timestamp: new Date(msg.timestamp)
+        }));
+
+        setMessages(loadedMessages);
+
+        // If session has a ticket, show it
+        if (session.ticketId) {
+          try {
+            const ticketResponse = await ticketService.getTicket(session.ticketId);
+            if (ticketResponse.data.success) {
+              setCurrentTicket(ticketResponse.data.data);
+            }
+          } catch (ticketErr) {
+            console.log('Could not load ticket:', ticketErr);
+          }
+        }
+
+        toast.success(t('chat.conversation') + ' ' + t('common.loading').replace('...', ''));
+      } else {
+        toast.info(t('chat.noHistory'));
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
+      toast.error(t('chat.errorLoadingHistory'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDownloadTicket = async () => {
     if (!currentTicket) return;
 
@@ -369,10 +418,7 @@ function ChatPage() {
           {isAuthenticated && (
             <Collapse in={showHistory}>
               <Box sx={{ mb: 2 }}>
-                <ChatHistory onSelectSession={(session) => {
-                  toast.info(t('chat.loadingSession'));
-                  // Could load previous session here if needed
-                }} />
+                <ChatHistory onSelectSession={handleLoadSession} />
               </Box>
               <Box sx={{ mb: 2 }}>
                 <MyTickets compact />

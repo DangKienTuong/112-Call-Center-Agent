@@ -197,9 +197,11 @@ function hasCompleteLocation(location) {
 function hasAllRequiredInfo(state) {
   const hasLocation = hasCompleteLocation(state.location);
   const hasEmergencyType = state.emergencyTypes && state.emergencyTypes.length > 0;
-  const hasPhone = state.phone && state.phone.length >= 9;
+  // Check phone from state or from userMemory (for authenticated users)
+  const hasPhone = (state.phone && state.phone.length >= 9) ||
+                   (state.isAuthenticated && state.userMemory?.savedPhone);
   const hasAffectedPeople = state.affectedPeople.total > 0;
-  
+
   return hasLocation && hasEmergencyType && hasPhone && hasAffectedPeople;
 }
 
@@ -208,20 +210,23 @@ function hasAllRequiredInfo(state) {
  */
 function getMissingInfo(state) {
   const missing = [];
-  
+
   if (!hasCompleteLocation(state.location)) {
     missing.push('location');
   }
   if (!state.emergencyTypes || state.emergencyTypes.length === 0) {
     missing.push('emergency');
   }
-  if (!state.phone) {
+  // Check phone from state or from userMemory
+  const hasPhone = state.phone ||
+                   (state.isAuthenticated && state.userMemory?.savedPhone);
+  if (!hasPhone) {
     missing.push('phone');
   }
   if (state.affectedPeople.total === 0) {
     missing.push('people');
   }
-  
+
   return missing;
 }
 
@@ -244,7 +249,14 @@ function buildTicketInfo(state) {
     state.location.district,
     state.location.city
   ].filter(Boolean);
-  
+
+  // Use phone from state, or fallback to userMemory for authenticated users
+  const phone = state.phone || (state.userMemory?.savedPhone) || null;
+  // Use name from state, or fallback to userMemory for authenticated users
+  const reporterName = state.reporter?.name ||
+                       (state.userMemory?.savedName) ||
+                       'Chưa xác định';
+
   return {
     location: locationParts.join(', '),
     landmarks: state.location.landmarks || '',
@@ -252,8 +264,8 @@ function buildTicketInfo(state) {
     emergencyType: state.emergencyTypes[0] || null, // Primary type for backwards compatibility
     description: state.description || 'Báo cáo qua tổng đài 112',
     reporter: {
-      name: state.reporter?.name || 'Chưa xác định',
-      phone: state.phone,
+      name: reporterName,
+      phone: phone,
       email: state.reporter?.email || ''
     },
     affectedPeople: {

@@ -6,7 +6,7 @@ const { buildTicketInfo } = require('../state');
  */
 async function showConfirmationNode(state) {
   console.log('[ShowConfirmation] Building confirmation message');
-  
+
   // Build location string
   const locationParts = [
     state.location.address,
@@ -15,7 +15,7 @@ async function showConfirmationNode(state) {
     state.location.city
   ].filter(Boolean);
   const locationStr = locationParts.join(', ');
-  
+
   // Map emergency types to Vietnamese
   const emergencyTypeMap = {
     'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
@@ -25,7 +25,7 @@ async function showConfirmationNode(state) {
   const emergencyTypesVi = state.emergencyTypes
     .map(t => emergencyTypeMap[t] || t)
     .join(', ');
-  
+
   // Build list of forces to be dispatched
   const forces = [];
   if (state.supportRequired.police) forces.push('Công an');
@@ -35,19 +35,22 @@ async function showConfirmationNode(state) {
     forces.push('Cứu hộ');
   }
   const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
-  
+
+  // Use phone from state, or fallback to userMemory for authenticated users
+  const phone = state.phone || (state.userMemory?.savedPhone) || 'Chưa có';
+
   // Build confirmation message
   const confirmationMessage = `📋 **XÁC NHẬN THÔNG TIN PHIẾU KHẨN CẤP:**
 
 • **Địa điểm:** ${locationStr}
 • **Loại tình huống:** ${emergencyTypesVi}
-• **Số điện thoại:** ${state.phone}
+• **Số điện thoại:** ${phone}
 • **Số người bị ảnh hưởng:** ${state.affectedPeople.total} người
 
 🚨 **Lực lượng sẽ điều động:** ${forcesStr}
 
 ⚠️ **Vui lòng xác nhận thông tin trên đã chính xác?** (Trả lời "Đúng" hoặc "Xác nhận" để tạo phiếu khẩn cấp)`;
-  
+
   return {
     response: confirmationMessage,
     confirmationShown: true,
