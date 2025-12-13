@@ -147,14 +147,19 @@ async function processMessage(message, sessionId, context = [], options = {}) {
       sessionId: sessionId,
     };
 
-    // Inject user memory if available and no existing state (first message)
-    if (userMemory && !currentState) {
-      input.userMemory = userMemory;
+    // ALWAYS inject user memory and auth status when authenticated
+    // This ensures userMemory and isAuthenticated are available on EVERY invocation,
+    // not just the first message, so the router can properly skip phone collection
+    if (userId) {
       input.isAuthenticated = true;
 
-      // Pre-fill phone if available
-      if (userMemory.savedPhone && !input.phone) {
-        input.phone = userMemory.savedPhone;
+      if (userMemory) {
+        input.userMemory = userMemory;
+
+        // Pre-fill phone from userMemory if available
+        if (userMemory.savedPhone) {
+          input.phone = userMemory.savedPhone;
+        }
       }
     }
 
