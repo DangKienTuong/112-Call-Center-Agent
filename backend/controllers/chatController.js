@@ -45,9 +45,10 @@ exports.processMessage = async (req, res) => {
     // If LangGraph indicates ticket should be created, create it here
     if (result.shouldCreateTicket && result.ticketInfo) {
       console.log('[Controller] Auto-creating ticket from LangGraph output');
-      
+
       try {
-        const ticketData = await createTicketFromInfo(result.ticketInfo, sessionId);
+        // Pass userId so the function can use User profile data for authenticated reporters
+        const ticketData = await createTicketFromInfo(result.ticketInfo, sessionId, userId);
 
         // Complete session and update user memory
         await langgraphService.completeSessionWithTicket(
@@ -142,8 +143,11 @@ Vui lòng giữ bình tĩnh và thực hiện theo hướng dẫn đã cung cấ
 
 /**
  * Helper function to create ticket from ticketInfo
+ * @param {Object} ticketInfo - Ticket information from LangGraph
+ * @param {string} sessionId - Chat session ID
+ * @param {string} userId - User ID for authenticated reporters (optional)
  */
-async function createTicketFromInfo(ticketInfo, sessionId) {
+async function createTicketFromInfo(ticketInfo, sessionId, userId = null) {
   // Generate ticket ID
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -151,13 +155,35 @@ async function createTicketFromInfo(ticketInfo, sessionId) {
   const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
   const ticketId = `TD-${dateStr}-${timeStr}-${randomStr}`;
 
+  // Get reporter info - prioritize User profile for authenticated users
+  let reporterName = ticketInfo.reporter?.name || 'Chưa xác định';
+  let reporterPhone = ticketInfo.reporter?.phone || ticketInfo.phone;
+  let reporterEmail = ticketInfo.reporter?.email || '';
+
+  // If authenticated user, use their profile data directly
+  if (userId) {
+    try {
+      const User = require('../models/User');
+      const user = await User.findById(userId).select('profile email').lean();
+      if (user) {
+        // Use profile data, fallback to ticketInfo if not available
+        reporterName = user.profile?.fullName || ticketInfo.reporter?.name || 'Chưa xác định';
+        reporterPhone = user.profile?.phone || ticketInfo.reporter?.phone || ticketInfo.phone;
+        reporterEmail = user.email || ticketInfo.reporter?.email || '';
+        console.log(`[Controller] Using authenticated user profile: ${reporterName}, ${reporterPhone}`);
+      }
+    } catch (err) {
+      console.error('[Controller] Error fetching user profile:', err);
+    }
+  }
+
   // Create ticket object
   const ticket = new Ticket({
     ticketId,
     reporter: {
-      name: ticketInfo.reporter?.name || 'Chưa xác định',
-      phone: ticketInfo.reporter?.phone || ticketInfo.phone,
-      email: ticketInfo.reporter?.email || ''
+      name: reporterName,
+      phone: reporterPhone,
+      email: reporterEmail
     },
     location: {
       address: ticketInfo.location,
@@ -193,6 +219,7 @@ async function createTicketFromInfo(ticketInfo, sessionId) {
 exports.createTicketFromChat = async (req, res) => {
   try {
     const { ticketInfo, sessionId } = req.body;
+    const userId = req.user?._id || null;
 
     // Validate required fields
     if (!ticketInfo || !ticketInfo.location || !ticketInfo.emergencyType) {
@@ -202,8 +229,29 @@ exports.createTicketFromChat = async (req, res) => {
       });
     }
 
+    // Get reporter info - prioritize User profile for authenticated users
+    let reporterName = ticketInfo.reporter?.name || 'Chưa xác định';
+    let reporterPhone = ticketInfo.reporter?.phone;
+    let reporterEmail = ticketInfo.reporter?.email || '';
+
+    // If authenticated user, use their profile data directly
+    if (userId) {
+      try {
+        const User = require('../models/User');
+        const user = await User.findById(userId).select('profile email').lean();
+        if (user) {
+          reporterName = user.profile?.fullName || ticketInfo.reporter?.name || 'Chưa xác định';
+          reporterPhone = user.profile?.phone || ticketInfo.reporter?.phone;
+          reporterEmail = user.email || ticketInfo.reporter?.email || '';
+          console.log(`[Controller] Using authenticated user profile: ${reporterName}, ${reporterPhone}`);
+        }
+      } catch (err) {
+        console.error('[Controller] Error fetching user profile:', err);
+      }
+    }
+
     // Validate phone number (MANDATORY)
-    if (!ticketInfo.reporter || !ticketInfo.reporter.phone) {
+    if (!reporterPhone) {
       return res.status(400).json({
         success: false,
         message: 'Cần có số điện thoại để lực lượng cứu hộ liên hệ.'
@@ -221,9 +269,9 @@ exports.createTicketFromChat = async (req, res) => {
     const ticket = new Ticket({
       ticketId,
       reporter: {
-        name: ticketInfo.reporter.name || 'Chưa xác định',
-        phone: ticketInfo.reporter.phone,
-        email: ticketInfo.reporter.email || ''
+        name: reporterName,
+        phone: reporterPhone,
+        email: reporterEmail
       },
       location: {
         address: ticketInfo.location,
