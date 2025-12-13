@@ -1,8 +1,9 @@
 const Ticket = require('../models/Ticket');
-const openaiService = require('../services/openaiService');
-const firstAidService = require('../services/firstAidService');
+const langgraphService = require('../services/langgraph');
+const openaiService = require('../services/openaiService'); // Keep as fallback
+const firstAidService = require('../services/firstAidService'); // Keep as fallback
 
-// Process chat message using OpenAI
+// Process chat message using LangGraph
 exports.processMessage = async (req, res) => {
   try {
     const { message, sessionId, context } = req.body;
@@ -17,13 +18,84 @@ exports.processMessage = async (req, res) => {
 
     console.log(`Processing message for session ${sessionId}: ${message}`);
 
-    // Process message through OpenAI service
-    const result = await openaiService.processMessage(message, sessionId, context);
+    let result;
+    try {
+      // Use new LangGraph service
+      result = await langgraphService.processMessage(message, sessionId, context);
+      console.log('[Controller] LangGraph processing successful');
+    } catch (langgraphError) {
+      console.error('[Controller] LangGraph error, falling back to old service:', langgraphError);
+      // Fallback to old service
+      result = await openaiService.processMessage(message, sessionId, context);
+      console.log('[Controller] Fallback service used');
+    }
 
     // Log the response for debugging
     console.log('AI Response:', result.response);
     console.log('Extracted Info:', result.ticketInfo);
     console.log('Should Create Ticket:', result.shouldCreateTicket);
+
+    // If LangGraph indicates ticket should be created, create it here
+    if (result.shouldCreateTicket && result.ticketInfo) {
+      console.log('[Controller] Auto-creating ticket from LangGraph output');
+      
+      try {
+        const ticketData = await createTicketFromInfo(result.ticketInfo, sessionId);
+        
+        // Build final response with ticket info and first aid guidance
+        const emergencyTypeMap = {
+          'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
+          'MEDICAL': 'Cấp cứu y tế',
+          'SECURITY': 'An ninh'
+        };
+        
+        const emergencyTypes = result.ticketInfo.emergencyTypes || [result.ticketInfo.emergencyType];
+        const emergencyTypesVi = emergencyTypes.map(t => emergencyTypeMap[t] || t).join(', ');
+        
+        const forces = [];
+        if (result.ticketInfo.supportRequired?.police) forces.push('Công an');
+        if (result.ticketInfo.supportRequired?.fireDepartment) forces.push('Cứu hỏa');
+        if (result.ticketInfo.supportRequired?.ambulance) forces.push('Cấp cứu');
+        if (result.ticketInfo.supportRequired?.rescue && !result.ticketInfo.supportRequired?.fireDepartment) {
+          forces.push('Cứu hộ');
+        }
+        const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
+        
+        const confirmationMessage = `✅ **PHIẾU KHẨN CẤP ${ticketData.ticketId} ĐÃ ĐƯỢC TẠO**
+
+📋 **Thông tin đã ghi nhận:**
+• Địa điểm: ${result.ticketInfo.location}
+• Loại tình huống: ${emergencyTypesVi}
+• Số điện thoại: ${result.ticketInfo.reporter.phone}
+• Số người bị ảnh hưởng: ${result.ticketInfo.affectedPeople?.total || 1}
+
+🚨 **${forcesStr} đang được điều động đến ngay!**
+
+---
+
+💡 **HƯỚNG DẪN XỬ LÝ BAN ĐẦU:**
+${result.firstAidGuidance || 'Vui lòng giữ bình tĩnh và chờ lực lượng chức năng đến xử lý.'}`;
+        
+        // Clear session after ticket creation
+        await langgraphService.clearSession(sessionId);
+        
+        return res.json({
+          success: true,
+          data: {
+            response: confirmationMessage,
+            ticketInfo: result.ticketInfo,
+            shouldCreateTicket: false, // Already created
+            ticketId: ticketData.ticketId,
+            ticket: ticketData.ticket,
+            firstAidGuidance: result.firstAidGuidance,
+            sessionId: sessionId
+          }
+        });
+      } catch (ticketError) {
+        console.error('[Controller] Error creating ticket:', ticketError);
+        // Return the original result even if ticket creation fails
+      }
+    }
 
     res.json({
       success: true,
@@ -46,6 +118,55 @@ exports.processMessage = async (req, res) => {
     });
   }
 };
+
+/**
+ * Helper function to create ticket from ticketInfo
+ */
+async function createTicketFromInfo(ticketInfo, sessionId) {
+  // Generate ticket ID
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const timeStr = now.toISOString().slice(11, 19).replace(/:/g, '');
+  const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const ticketId = `TD-${dateStr}-${timeStr}-${randomStr}`;
+
+  // Create ticket object
+  const ticket = new Ticket({
+    ticketId,
+    reporter: {
+      name: ticketInfo.reporter?.name || 'Chưa xác định',
+      phone: ticketInfo.reporter?.phone || ticketInfo.phone,
+      email: ticketInfo.reporter?.email || ''
+    },
+    location: {
+      address: ticketInfo.location,
+      landmarks: ticketInfo.landmarks || ''
+    },
+    emergencyTypes: ticketInfo.emergencyTypes || [ticketInfo.emergencyType],
+    emergencyType: ticketInfo.emergencyType || ticketInfo.emergencyTypes[0],
+    description: ticketInfo.description || 'Báo cáo qua tổng đài 112',
+    affectedPeople: {
+      total: ticketInfo.affectedPeople?.total || 1,
+      injured: ticketInfo.affectedPeople?.injured || 0,
+      critical: ticketInfo.affectedPeople?.critical || 0,
+      deceased: ticketInfo.affectedPeople?.deceased || 0
+    },
+    supportRequired: {
+      police: ticketInfo.supportRequired?.police || false,
+      ambulance: ticketInfo.supportRequired?.ambulance || false,
+      fireDepartment: ticketInfo.supportRequired?.fireDepartment || false,
+      rescue: ticketInfo.supportRequired?.rescue || false
+    },
+    status: 'URGENT',
+    priority: ticketInfo.priority || 'HIGH',
+    chatSessionId: sessionId
+  });
+
+  await ticket.save();
+  console.log(`[Controller] Emergency ticket created: ${ticketId}`);
+
+  return { ticketId, ticket };
+}
 
 // Create ticket from chat and get first aid guidance
 exports.createTicketFromChat = async (req, res) => {
@@ -189,13 +310,29 @@ ${firstAidGuidance}`;
 exports.getSessionHistory = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const history = openaiService.getSessionHistory(sessionId);
+    
+    // Try LangGraph first
+    let state = await langgraphService.getSessionState(sessionId);
+    
+    if (!state) {
+      // Fallback to old service
+      const history = openaiService.getSessionHistory(sessionId);
+      return res.json({
+        success: true,
+        data: {
+          sessionId: sessionId,
+          history: history,
+          source: 'legacy'
+        }
+      });
+    }
 
     res.json({
       success: true,
       data: {
         sessionId: sessionId,
-        history: history
+        state: state,
+        source: 'langgraph'
       }
     });
   } catch (error) {
@@ -211,6 +348,9 @@ exports.getSessionHistory = async (req, res) => {
 exports.clearSession = async (req, res) => {
   try {
     const { sessionId } = req.params;
+    
+    // Clear in both services for safety
+    await langgraphService.clearSession(sessionId);
     openaiService.clearSession(sessionId);
 
     res.json({
@@ -229,11 +369,21 @@ exports.clearSession = async (req, res) => {
 // Health check endpoint
 exports.healthCheck = async (req, res) => {
   try {
+    // Get retriever status
+    const retriever = require('../services/langgraph/retriever');
+    const retrieverStatus = retriever.getStatus();
+    
     const status = {
       service: 'Emergency 112 Chat Service',
       status: 'operational',
+      engine: 'LangGraph',
       openai: process.env.OPENAI_API_KEY ? 'configured' : 'not configured',
       openai_model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview (default)',
+      retriever: {
+        initialized: retrieverStatus.initialized,
+        hasVectorStore: retrieverStatus.hasVectorStore,
+        documentTypes: Object.keys(retrieverStatus.documents)
+      },
       timestamp: new Date().toISOString()
     };
 
