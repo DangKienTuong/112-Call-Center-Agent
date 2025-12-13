@@ -126,17 +126,6 @@ async function showFirstAidGuidanceNode(state) {
     guidance = 'Hãy giữ bình tĩnh, di chuyển đến nơi an toàn nếu có thể, và tránh đối đầu trực tiếp.';
   } else if (status.hasVectorStore) {
     try {
-      // Build search query from emergency types and user messages
-      const emergencyTypeMap = {
-        'FIRE_RESCUE': 'cháy nổ cứu hỏa mắc kẹt',
-        'MEDICAL': 'cấp cứu y tế sơ cứu tai nạn',
-        'SECURITY': 'an ninh',
-      };
-
-      const typeKeywords = state.emergencyTypes
-        .map(t => emergencyTypeMap[t] || '')
-        .join(' ');
-
       // Get user messages for context
       const userMessages = (state.messages || [])
         .filter(m => m.role === 'reporter')
@@ -145,12 +134,56 @@ async function showFirstAidGuidanceNode(state) {
         .join(' ');
 
       const situationDescription = userMessages || state.description || '';
-      const query = `${situationDescription} ${typeKeywords}`.trim();
+      
+      // Extract key emergency terms from user message for more focused search
+      // This helps find specific first aid instructions instead of generic ones
+      const emergencyKeywords = [
+        // MEDICAL
+        'đột quỵ', 'tai biến', 'ngất', 'bất tỉnh', 'co giật', 'đau tim', 'nhồi máu',
+        'chảy máu', 'vết thương', 'gãy xương', 'trật khớp', 'bỏng', 'phỏng',
+        'ngộ độc', 'dị ứng', 'sốc phản vệ', 'đuối nước', 'điện giật',
+        'rắn cắn', 'chó cắn', 'ong đốt', 'ong chích',
+        'ngưng tim', 'ngưng thở', 'hồi sinh tim phổi', 'cpr',
+        'tai nạn giao thông', 'tai nạn',
+        // FIRE_RESCUE  
+        'cháy', 'hỏa hoạn', 'mắc kẹt', 'sập', 'nổ',
+      ];
+      
+      // Find matching keywords in user message
+      const lowerMessage = situationDescription.toLowerCase();
+      const foundKeywords = emergencyKeywords.filter(kw => lowerMessage.includes(kw));
+      
+      let query;
+      if (foundKeywords.length > 0) {
+        // Use specific keywords for focused search
+        query = `xử trí ${foundKeywords.join(' ')}`;
+      } else if (situationDescription.length > 10) {
+        // Fallback to situation description but keep it short
+        const shortDesc = situationDescription.split(' ').slice(0, 10).join(' ');
+        query = `cách xử trí ${shortDesc}`;
+      } else {
+        // Fallback to type-based keywords
+        const emergencyTypeMap = {
+          'FIRE_RESCUE': 'xử trí cháy nổ cứu hộ',
+          'MEDICAL': 'sơ cứu cấp cứu y tế',
+          'SECURITY': 'xử lý an ninh',
+        };
+        query = state.emergencyTypes
+          .map(t => emergencyTypeMap[t] || '')
+          .filter(k => k)
+          .join(' ');
+      }
 
       console.log('[ShowFirstAidGuidance] Search query:', query.substring(0, 100));
+      console.log('[ShowFirstAidGuidance] Found keywords:', foundKeywords);
+
+      // For first aid guidance, search in both MEDICAL and the detected emergency types
+      // because many emergencies (drowning, fire burns, etc.) require medical first aid
+      const searchTypes = [...new Set([...state.emergencyTypes, 'MEDICAL'])];
+      console.log('[ShowFirstAidGuidance] Searching in types:', searchTypes);
 
       // Retrieve relevant documents
-      const relevantDocs = await retriever.retrieve(query, state.emergencyTypes, 3);
+      const relevantDocs = await retriever.retrieve(query, searchTypes, 3);
 
       if (relevantDocs.length > 0) {
         console.log(`[ShowFirstAidGuidance] Found ${relevantDocs.length} relevant documents`);
@@ -175,20 +208,17 @@ Mô tả: ${situationDescription || 'Không có mô tả chi tiết'}
 **TÀI LIỆU THAM KHẢO:**
 ${context}
 
-**QUY TẮC BẮT BUỘC:**
-1. CHỈ ĐƯỢC sử dụng thông tin CÓ TRONG tài liệu tham khảo phía trên
-2. TUYỆT ĐỐI KHÔNG ĐƯỢC tự bịa ra hoặc suy luận thông tin không có trong tài liệu
-3. TUYỆT ĐỐI KHÔNG được ghi:
+**QUY TẮC:**
+1. Dựa vào tài liệu tham khảo, trích xuất các bước xử lý phù hợp nhất với tình huống
+2. KHÔNG ĐƯỢC ghi:
    - Nguồn trích dẫn (không ghi "[Nguồn: ...]" hay tên tài liệu)
    - Lời khuyên gọi cấp cứu/cứu hỏa/công an (113, 114, 115) vì người dùng đã đang liên hệ qua hệ thống này
    - Lời khuyên di chuyển đến cơ sở y tế gần nhất vì lực lượng chức năng sẽ đến hỗ trợ
-4. Nếu tài liệu KHÔNG đề cập cụ thể đến tình huống này, trả về chuỗi rỗng ""
-5. Nếu tìm thấy hướng dẫn phù hợp:
-   - Trình bày ngắn gọn theo dạng danh sách các bước (1., 2., 3...)
-   - Tối đa 5 bước quan trọng nhất
-   - Chỉ nêu những bước thực sự hữu ích và có trong tài liệu
+3. Trình bày ngắn gọn theo dạng danh sách các bước (1., 2., 3...)
+4. Tối đa 5 bước quan trọng nhất
+5. Nếu tài liệu không có thông tin liên quan, trả về chuỗi rỗng ""
 
-Hãy cung cấp hướng dẫn xử lý ban đầu (nếu có):`;
+Hãy cung cấp hướng dẫn xử lý ban đầu:`;
 
         const response = await model.invoke(prompt);
         guidance = response.content.trim();

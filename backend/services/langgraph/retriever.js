@@ -117,14 +117,17 @@ class DocumentRetriever {
   }
 
   /**
-   * Index PDF documents into MongoDB
+   * Index documents into MongoDB
+   * Prefers OCR text files if available, falls back to PDF extraction
    */
   async _indexDocuments() {
     try {
       console.log('[Retriever] Starting document indexing...');
 
       const documentsPath = path.join(__dirname, '../../../reference_document');
+      const ocrOutputPath = path.join(documentsPath, 'ocr_output');
       console.log('[Retriever] Looking for documents in:', documentsPath);
+      console.log('[Retriever] OCR output directory:', ocrOutputPath);
 
       // Initialize embeddings
       this.embeddings = new OpenAIEmbeddings({
@@ -140,12 +143,14 @@ class DocumentRetriever {
 
       const documentsToIndex = [
         {
-          path: path.join(documentsPath, 'Cam-nang-PCCC-trong-gia-dinh.pdf'),
+          pdfPath: path.join(documentsPath, 'Cam-nang-PCCC-trong-gia-dinh.pdf'),
+          ocrPath: path.join(ocrOutputPath, 'Cam-nang-PCCC-trong-gia-dinh_ocr.txt'),
           type: 'FIRE_RESCUE',
           name: 'Cẩm nang PCCC trong gia đình',
         },
         {
-          path: path.join(documentsPath, 'tai-lieu-so-cap-cuu.pdf'),
+          pdfPath: path.join(documentsPath, 'tai-lieu-so-cap-cuu.pdf'),
+          ocrPath: path.join(ocrOutputPath, 'tai-lieu-so-cap-cuu_ocr.txt'),
           type: 'MEDICAL',
           name: 'Tài liệu sơ cấp cứu',
         }
@@ -154,14 +159,18 @@ class DocumentRetriever {
       let totalIndexed = 0;
 
       for (const docInfo of documentsToIndex) {
-        if (!fs.existsSync(docInfo.path)) {
-          console.warn(`[Retriever] ✗ Document not found: ${docInfo.path}`);
+        // Determine which file to use (OCR text preferred over PDF)
+        const useOCR = fs.existsSync(docInfo.ocrPath);
+        const sourcePath = useOCR ? docInfo.ocrPath : docInfo.pdfPath;
+        
+        if (!fs.existsSync(sourcePath)) {
+          console.warn(`[Retriever] ✗ Document not found: ${sourcePath}`);
           continue;
         }
 
         try {
           // Calculate file hash
-          const fileHash = this._calculateFileHash(docInfo.path);
+          const fileHash = this._calculateFileHash(sourcePath);
           
           // Check if already indexed
           const isIndexed = await DocumentEmbedding.isIndexed(fileHash);
@@ -170,30 +179,77 @@ class DocumentRetriever {
             console.log(`[Retriever] ✓ ${docInfo.name} already indexed (hash: ${fileHash.substring(0, 8)}...)`);
             const count = await DocumentEmbedding.countDocuments({ documentHash: fileHash });
             this.documentMetadata[docInfo.type] = {
-              path: docInfo.path,
+              path: sourcePath,
               name: docInfo.name,
               loaded: true,
               chunkCount: count,
               hash: fileHash,
+              useOCR: useOCR,
             };
             continue;
           }
 
           console.log(`[Retriever] Indexing ${docInfo.name}...`);
+          console.log(`[Retriever]   Source: ${useOCR ? 'OCR text file' : 'PDF file'}`);
 
-          // Load PDF
-          const loader = new PDFLoader(docInfo.path);
-          const docs = await loader.load();
-          console.log(`[Retriever]   Loaded ${docs.length} pages`);
+          let docs = [];
+          
+          if (useOCR) {
+            // Load OCR text file
+            const textContent = fs.readFileSync(docInfo.ocrPath, 'utf-8');
+            console.log(`[Retriever]   Loaded ${textContent.length} characters from OCR file`);
+            
+            // Split by page markers if present, otherwise treat as single document
+            const pageRegex = /=== TRANG (\d+) ===/g;
+            const pages = textContent.split(pageRegex).filter(s => s.trim());
+            
+            if (pages.length > 1) {
+              // Has page markers
+              let pageNum = 0;
+              for (let i = 0; i < pages.length; i++) {
+                const content = pages[i].trim();
+                if (/^\d+$/.test(content)) {
+                  pageNum = parseInt(content);
+                } else if (content.length > 50) {
+                  docs.push(new Document({
+                    pageContent: content,
+                    metadata: {
+                      source: docInfo.name,
+                      type: docInfo.type,
+                      page: pageNum,
+                      fromOCR: true,
+                    }
+                  }));
+                }
+              }
+            } else {
+              // Single document without page markers
+              docs.push(new Document({
+                pageContent: textContent,
+                metadata: {
+                  source: docInfo.name,
+                  type: docInfo.type,
+                  fromOCR: true,
+                }
+              }));
+            }
+            console.log(`[Retriever]   Created ${docs.length} page documents`);
+          } else {
+            // Load PDF using PDFLoader
+            const loader = new PDFLoader(docInfo.pdfPath);
+            docs = await loader.load();
+            console.log(`[Retriever]   Loaded ${docs.length} pages from PDF`);
 
-          // Add metadata
-          docs.forEach(doc => {
-            doc.metadata = {
-              ...doc.metadata,
-              source: docInfo.name,
-              type: docInfo.type,
-            };
-          });
+            // Add metadata
+            docs.forEach(doc => {
+              doc.metadata = {
+                ...doc.metadata,
+                source: docInfo.name,
+                type: docInfo.type,
+                fromOCR: false,
+              };
+            });
+          }
 
           // Split into chunks
           const splitDocs = await textSplitter.splitDocuments(docs);
@@ -213,12 +269,9 @@ class DocumentRetriever {
             metadata: {
               source: doc.metadata.source,
               type: doc.metadata.type,
-              page: doc.metadata.loc?.pageNumber,
+              page: doc.metadata.page || doc.metadata.loc?.pageNumber,
               chunkIndex: idx,
-              pdf: {
-                totalPages: doc.metadata.pdf?.totalPages,
-                info: doc.metadata.pdf?.info,
-              }
+              fromOCR: doc.metadata.fromOCR || false,
             },
             documentHash: fileHash,
           }));
@@ -227,11 +280,12 @@ class DocumentRetriever {
           console.log(`[Retriever] ✓ ${docInfo.name} indexed successfully (${embeddingDocs.length} chunks)`);
 
           this.documentMetadata[docInfo.type] = {
-            path: docInfo.path,
+            path: sourcePath,
             name: docInfo.name,
             loaded: true,
             chunkCount: embeddingDocs.length,
             hash: fileHash,
+            useOCR: useOCR,
           };
 
           totalIndexed += embeddingDocs.length;

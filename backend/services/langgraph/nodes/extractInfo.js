@@ -29,7 +29,12 @@ async function extractInfoNode(state) {
     affectedPeople: state.affectedPeople,
   };
   
-  const prompt = createExtractionPrompt(state.currentMessage, { collectedInfo });
+  // Get the last operator message for context
+  const lastOperatorMessage = state.messages
+    ?.filter(m => m.role === 'operator')
+    ?.slice(-1)[0]?.message;
+  
+  const prompt = createExtractionPrompt(state.currentMessage, { collectedInfo, lastOperatorMessage });
   
   try {
     // Extract information using LLM
@@ -106,10 +111,6 @@ async function extractInfoNode(state) {
           affectedUpdate.total = newInjured + newCritical;
         }
       }
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d829d33b-6fb1-464a-9714-f6b338a91340',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'extractInfo.js:95',message:'Extracted affectedPeople (FIXED)',data:{extracted:extracted.affectedPeople,affectedUpdate:affectedUpdate,hasTotal:affectedUpdate.total!==undefined,hasInjured:affectedUpdate.injured!==undefined,hasCritical:affectedUpdate.critical!==undefined,calculatedTotal:affectedUpdate.total},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3-FIX'})}).catch(()=>{});
-      // #endregion
       
       if (Object.keys(affectedUpdate).length > 0) {
         updates.affectedPeople = affectedUpdate;

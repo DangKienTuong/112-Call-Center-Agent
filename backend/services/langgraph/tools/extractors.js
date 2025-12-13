@@ -70,22 +70,26 @@ function createExtractionPrompt(message, context = {}) {
   const contextInfo = context.collectedInfo ? 
     `\n\nThông tin đã thu thập trước đó:\n${JSON.stringify(context.collectedInfo, null, 2)}` : '';
   
+  const lastQuestionInfo = context.lastOperatorMessage ?
+    `\n\nCâu hỏi vừa được hỏi: "${context.lastOperatorMessage}"` : '';
+  
   return `Bạn là hệ thống trích xuất thông tin cho tổng đài khẩn cấp 112.
 Nhiệm vụ: Phân tích tin nhắn của người dùng và trích xuất TẤT CẢ thông tin có liên quan.
 
 Tin nhắn người dùng: "${message}"
-${contextInfo}
+${contextInfo}${lastQuestionInfo}
 
 Quy tắc quan trọng:
 1. Chỉ trích xuất thông tin CÓ TRONG tin nhắn, KHÔNG bịa ra
 2. Nếu không có thông tin nào, trả về object rỗng {}
-3. emergencyTypes phải chính xác:
+3. Nếu câu trả lời là số đơn giản và câu hỏi liên quan đến số người, trích xuất vào affectedPeople.total
+4. emergencyTypes phải chính xác:
    - Từ khóa trộm/cướp/đánh nhau/gây rối → SECURITY
    - Từ khóa cháy/nổ/mắc kẹt/đuối nước → FIRE_RESCUE
    - Từ khóa tai nạn/bị thương/bất tỉnh/cấp cứu → MEDICAL
    - Có thể có nhiều loại cùng lúc
-4. Địa chỉ phải đầy đủ: số nhà, đường, phường/xã, thành phố
-5. Số điện thoại phải là số Việt Nam (0xxxxxxxxx hoặc +84xxxxxxxxx)
+5. Địa chỉ phải đầy đủ: số nhà, đường, phường/xã, thành phố
+6. Số điện thoại phải là số Việt Nam (0xxxxxxxxx hoặc +84xxxxxxxxx)
 
 Trích xuất thông tin:`;
 }
