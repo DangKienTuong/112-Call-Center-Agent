@@ -39,13 +39,25 @@ const EmergencyStateAnnotation = Annotation.Root({
     reducer: (prev, next) => next || prev,
     default: () => null,
   }),
-  
+
+  // User authentication status
+  isAuthenticated: Annotation({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
+
+  // User memory (injected for authenticated users)
+  userMemory: Annotation({
+    reducer: (prev, next) => next ? { ...prev, ...next } : prev,
+    default: () => null,
+  }),
+
   // Message history (array of messages)
   messages: Annotation({
     reducer: (prev, next) => [...(prev || []), ...(Array.isArray(next) ? next : [next])],
     default: () => [],
   }),
-  
+
   // Current user message
   currentMessage: Annotation({
     reducer: (prev, next) => next || prev,

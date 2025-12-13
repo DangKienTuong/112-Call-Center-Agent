@@ -3,9 +3,13 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
-// Public routes
+// Public routes - Staff/Admin
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+
+// Public routes - Reporter (public users)
+router.post('/register-reporter', authController.registerReporter);
+router.post('/login-reporter', authController.loginReporter);
 
 // Protected routes
 router.use(auth);

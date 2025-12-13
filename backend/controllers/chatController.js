@@ -1,4 +1,6 @@
 const Ticket = require('../models/Ticket');
+const ChatSession = require('../models/ChatSession');
+const UserMemory = require('../models/UserMemory');
 const langgraphService = require('../services/langgraph');
 const openaiService = require('../services/openaiService'); // Keep as fallback
 const firstAidService = require('../services/firstAidService'); // Keep as fallback
@@ -16,12 +18,17 @@ exports.processMessage = async (req, res) => {
       });
     }
 
+    // Get user ID if authenticated (from optionalAuth middleware)
+    const userId = req.user?._id || null;
+    const isAuthenticated = req.isAuthenticated || false;
+
     console.log(`Processing message for session ${sessionId}: ${message}`);
+    console.log(`User: ${userId || 'guest'}, Authenticated: ${isAuthenticated}`);
 
     let result;
     try {
-      // Use new LangGraph service
-      result = await langgraphService.processMessage(message, sessionId, context);
+      // Use new LangGraph service with optional userId
+      result = await langgraphService.processMessage(message, sessionId, context, { userId });
       console.log('[Controller] LangGraph processing successful');
     } catch (langgraphError) {
       console.error('[Controller] LangGraph error, falling back to old service:', langgraphError);
@@ -41,7 +48,22 @@ exports.processMessage = async (req, res) => {
       
       try {
         const ticketData = await createTicketFromInfo(result.ticketInfo, sessionId);
-        
+
+        // Complete session and update user memory
+        await langgraphService.completeSessionWithTicket(
+          sessionId,
+          ticketData.ticketId,
+          {
+            emergencyTypes: result.ticketInfo.emergencyTypes,
+            location: result.ticketInfo.location,
+            description: result.ticketInfo.description,
+            phone: result.ticketInfo.reporter?.phone,
+            reporterName: result.ticketInfo.reporter?.name,
+            locationDetails: result.ticketInfo.locationDetails
+          },
+          userId
+        );
+
         // Build final response with ticket info and first aid guidance
         const emergencyTypeMap = {
           'FIRE_RESCUE': 'PCCC & Cứu nạn cứu hộ',
@@ -368,7 +390,7 @@ exports.healthCheck = async (req, res) => {
     // Get retriever status
     const retriever = require('../services/langgraph/retriever');
     const retrieverStatus = retriever.getStatus();
-    
+
     const status = {
       service: 'Emergency 112 Chat Service',
       status: 'operational',
@@ -391,6 +413,160 @@ exports.healthCheck = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Health check failed',
+      error: error.message
+    });
+  }
+};
+
+// Get user's chat history (requires authentication)
+exports.getChatHistory = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required to view chat history'
+      });
+    }
+
+    const limit = parseInt(req.query.limit) || 10;
+    const history = await langgraphService.getUserChatHistory(req.user._id, limit);
+
+    res.json({
+      success: true,
+      data: {
+        sessions: history,
+        total: history.length
+      }
+    });
+  } catch (error) {
+    console.error('Error getting chat history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get chat history',
+      error: error.message
+    });
+  }
+};
+
+// Get user's ticket history (requires authentication)
+exports.getTicketHistory = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required to view ticket history'
+      });
+    }
+
+    const tickets = await langgraphService.getUserTicketHistory(req.user._id);
+
+    // Also get full ticket details from Ticket model for active tickets
+    const ticketIds = tickets.map(t => t.ticketId);
+    const fullTickets = await Ticket.find({ ticketId: { $in: ticketIds } })
+      .select('ticketId status emergencyTypes location description createdAt updatedAt')
+      .lean();
+
+    // Merge ticket details
+    const ticketsWithDetails = tickets.map(t => {
+      const fullTicket = fullTickets.find(ft => ft.ticketId === t.ticketId);
+      return {
+        ...t,
+        currentStatus: fullTicket?.status || t.status,
+        updatedAt: fullTicket?.updatedAt || t.createdAt
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        tickets: ticketsWithDetails,
+        total: ticketsWithDetails.length
+      }
+    });
+  } catch (error) {
+    console.error('Error getting ticket history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get ticket history',
+      error: error.message
+    });
+  }
+};
+
+// Get a specific chat session details
+exports.getChatSessionDetails = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await ChatSession.findOne({ sessionId })
+      .select('sessionId userId messages status ticketId createdAt updatedAt')
+      .lean();
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    // Check ownership if authenticated
+    if (req.user && session.userId && session.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: session
+    });
+  } catch (error) {
+    console.error('Error getting session details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get session details',
+      error: error.message
+    });
+  }
+};
+
+// Get user's saved info (for pre-filling forms)
+exports.getUserSavedInfo = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const memory = await UserMemory.findOne({ userId: req.user._id });
+
+    if (!memory) {
+      return res.json({
+        success: true,
+        data: {
+          savedInfo: null,
+          hasHistory: false
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        savedInfo: memory.savedInfo,
+        recentTickets: memory.getRecentTickets(3),
+        stats: memory.stats,
+        hasHistory: memory.ticketHistory.length > 0
+      }
+    });
+  } catch (error) {
+    console.error('Error getting user saved info:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get saved info',
       error: error.message
     });
   }

@@ -12,7 +12,12 @@ import {
   Chip,
   IconButton,
   Divider,
-  Grid
+  Grid,
+  Avatar,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Collapse
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -22,7 +27,12 @@ import {
   Person,
   Warning,
   CheckCircle,
-  Download
+  Download,
+  Login,
+  Logout,
+  History,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
@@ -30,9 +40,15 @@ import chatService from '../services/chatService';
 import ticketService from '../services/ticketService';
 import MessageBubble from '../components/MessageBubble';
 import TicketSummary from '../components/TicketSummary';
+import AuthModal from '../components/AuthModal';
+import ChatHistory from '../components/ChatHistory';
+import MyTickets from '../components/MyTickets';
+import { useAuth } from '../contexts/AuthContext';
 
 function ChatPage() {
   const { t } = useTranslation();
+  const { user, isAuthenticated, logout } = useAuth();
+
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +56,11 @@ function ChatPage() {
   const [ticketInfo, setTicketInfo] = useState(null);
   const [currentTicket, setCurrentTicket] = useState(null);
   const messagesEndRef = useRef(null);
+
+  // Auth modal state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     // Generate session ID
@@ -180,15 +201,74 @@ function ChatPage() {
               </Typography>
             </Box>
           </Box>
-          <Box display="flex" gap={1}>
+          <Box display="flex" gap={1} alignItems="center">
             <Chip
               icon={<Phone />}
               label="112"
               sx={{ backgroundColor: 'white', fontSize: '1.2rem', fontWeight: 'bold' }}
             />
+
+            {/* Auth Button */}
+            {isAuthenticated ? (
+              <>
+                <Tooltip title={user?.profile?.fullName || user?.username}>
+                  <IconButton
+                    onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+                    sx={{ color: 'white' }}
+                  >
+                    <Avatar
+                      sx={{ width: 32, height: 32, bgcolor: 'white', color: 'primary.main' }}
+                    >
+                      {(user?.profile?.fullName || user?.username || 'U')[0].toUpperCase()}
+                    </Avatar>
+                  </IconButton>
+                </Tooltip>
+                <Menu
+                  anchorEl={userMenuAnchor}
+                  open={Boolean(userMenuAnchor)}
+                  onClose={() => setUserMenuAnchor(null)}
+                >
+                  <MenuItem disabled>
+                    <Person sx={{ mr: 1 }} />
+                    {user?.profile?.fullName || user?.username}
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem onClick={() => { setShowHistory(!showHistory); setUserMenuAnchor(null); }}>
+                    <History sx={{ mr: 1 }} />
+                    {t('chat.viewHistory')}
+                  </MenuItem>
+                  <MenuItem onClick={() => { logout(); setUserMenuAnchor(null); }}>
+                    <Logout sx={{ mr: 1 }} />
+                    {t('auth.logout')}
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <Tooltip title={t('auth.loginToSaveHistory')}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Login />}
+                  onClick={() => setAuthModalOpen(true)}
+                  sx={{
+                    color: 'white',
+                    borderColor: 'white',
+                    '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' }
+                  }}
+                >
+                  {t('auth.login')}
+                </Button>
+              </Tooltip>
+            )}
           </Box>
         </Box>
       </Paper>
+
+      {/* Auth Modal */}
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
 
       <Grid container spacing={2}>
         {/* Chat Section */}
@@ -282,6 +362,39 @@ function ChatPage() {
                   )}
                 </Box>
               )}
+            </Paper>
+          )}
+
+          {/* User History (authenticated users only) */}
+          {isAuthenticated && (
+            <Collapse in={showHistory}>
+              <Box sx={{ mb: 2 }}>
+                <ChatHistory onSelectSession={(session) => {
+                  toast.info(t('chat.loadingSession'));
+                  // Could load previous session here if needed
+                }} />
+              </Box>
+              <Box sx={{ mb: 2 }}>
+                <MyTickets compact />
+              </Box>
+            </Collapse>
+          )}
+
+          {/* Guest prompt */}
+          {!isAuthenticated && (
+            <Paper sx={{ p: 2, mb: 2, bgcolor: 'info.light' }}>
+              <Typography variant="body2" color="info.contrastText">
+                <Login sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                {t('auth.loginPrompt')}
+              </Typography>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setAuthModalOpen(true)}
+                sx={{ mt: 1, color: 'info.contrastText' }}
+              >
+                {t('auth.loginOrRegister')}
+              </Button>
             </Paper>
           )}
 

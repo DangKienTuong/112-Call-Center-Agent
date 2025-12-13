@@ -1,6 +1,7 @@
 const { hasAllRequiredInfo, hasCompleteLocation } = require('../state');
 const { ConfirmationCheckSchema } = require('../tools/extractors');
 const { ChatOpenAI } = require('@langchain/openai');
+const { isTicketQuery } = require('./memoryRetrieval');
 
 /**
  * Router Node
@@ -16,8 +17,17 @@ async function routerNode(state) {
     affectedPeople: state.affectedPeople,
     confirmationShown: state.confirmationShown,
     userConfirmed: state.userConfirmed,
+    isAuthenticated: state.isAuthenticated,
   });
-  
+
+  // Check if user is asking about past tickets (only if authenticated or message suggests it)
+  if (isTicketQuery(state.currentMessage)) {
+    console.log('[Router] Ticket query detected -> memoryRetrieval');
+    return {
+      currentStep: 'ticketQuery',
+    };
+  }
+
   // If we're in confirmation stage
   if (state.confirmationShown && !state.userConfirmed) {
     // Check if user is confirming or correcting
@@ -142,6 +152,8 @@ function routeToNextNode(state) {
   console.log('[Router] Routing based on step:', step);
 
   switch (step) {
+    case 'ticketQuery':
+      return 'memoryRetrieval';
     case 'emergency':
       return 'collectEmergency';
     case 'firstAid':

@@ -62,6 +62,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const registerReporter = async (userData) => {
+    try {
+      const response = await api.post('/auth/register-reporter', userData);
+      const { user, token } = response.data.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Registration failed'
+      };
+    }
+  };
+
+  const loginReporter = async (identifier, password) => {
+    try {
+      const response = await api.post('/auth/login-reporter', { identifier, password });
+      const { user, token } = response.data.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Login failed'
+      };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -90,8 +126,11 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    registerReporter,
+    loginReporter,
     logout,
-    updateProfile
+    updateProfile,
+    isAuthenticated: !!user
   };
 
   return (
