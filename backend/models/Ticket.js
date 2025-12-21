@@ -147,6 +147,30 @@ const ticketSchema = new mongoose.Schema({
       enum: ['DISPATCHED', 'EN_ROUTE', 'ON_SCENE', 'COMPLETED']
     }
   }],
+  // Assigned Vehicles
+  assignedVehicles: [{
+    vehicleId: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['AMBULANCE', 'POLICE', 'FIRE_TRUCK'],
+      required: true
+    },
+    licensePlate: String,
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    },
+    status: {
+      type: String,
+      enum: ['DISPATCHED', 'EN_ROUTE', 'ON_SCENE', 'COMPLETED'],
+      default: 'DISPATCHED'
+    },
+    arrivedAt: Date,
+    completedAt: Date
+  }],
   // Timestamps
   priority: {
     type: String,

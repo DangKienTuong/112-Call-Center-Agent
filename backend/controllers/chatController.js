@@ -4,6 +4,8 @@ const UserMemory = require('../models/UserMemory');
 const langgraphService = require('../services/langgraph');
 const openaiService = require('../services/openaiService'); // Keep as fallback
 const firstAidService = require('../services/firstAidService'); // Keep as fallback
+const vehicleService = require('../services/vehicleService');
+const { analyzeVehicleRequirements } = require('../services/langgraph/tools/extractors');
 
 // Process chat message using LangGraph
 exports.processMessage = async (req, res) => {
@@ -84,6 +86,22 @@ exports.processMessage = async (req, res) => {
         }
         const forcesStr = forces.length > 0 ? forces.join(', ') : 'Lực lượng cứu hộ';
         
+        // Build vehicle info section
+        let vehicleInfoStr = '';
+        if (ticketData.assignedVehicles && ticketData.assignedVehicles.length > 0) {
+          const vehicleTypeMap = {
+            'AMBULANCE': 'Xe cấp cứu',
+            'POLICE': 'Xe công an',
+            'FIRE_TRUCK': 'Xe cứu hỏa'
+          };
+          
+          vehicleInfoStr = '\n\n🚗 **Xe được điều động:**\n';
+          ticketData.assignedVehicles.forEach(v => {
+            const typeName = vehicleTypeMap[v.type] || v.type;
+            vehicleInfoStr += `• ${typeName} - ${v.licensePlate}\n`;
+          });
+        }
+        
         // Note: First aid guidance was already shown earlier in the flow
         // So we don't need to repeat it here, just show simple reminder
         const confirmationMessage = `✅ **PHIẾU KHẨN CẤP ${ticketData.ticketId} ĐÃ ĐƯỢC TẠO**
@@ -94,7 +112,7 @@ exports.processMessage = async (req, res) => {
 • Số điện thoại: ${result.ticketInfo.reporter.phone}
 • Số người bị ảnh hưởng: ${result.ticketInfo.affectedPeople?.total || 1}
 
-🚨 **${forcesStr} đang được điều động đến ngay!**
+🚨 **${forcesStr} đang được điều động đến ngay!**${vehicleInfoStr}
 
 Vui lòng giữ bình tĩnh và thực hiện theo hướng dẫn đã cung cấp trong khi chờ lực lượng chức năng đến hỗ trợ.`;
         
@@ -177,6 +195,9 @@ async function createTicketFromInfo(ticketInfo, sessionId, userId = null) {
     }
   }
 
+  // Parse location to extract ward, district, city
+  const locationParts = parseLocation(ticketInfo);
+
   // Create ticket object
   const ticket = new Ticket({
     ticketId,
@@ -187,7 +208,10 @@ async function createTicketFromInfo(ticketInfo, sessionId, userId = null) {
     },
     location: {
       address: ticketInfo.location,
-      landmarks: ticketInfo.landmarks || ''
+      landmarks: ticketInfo.landmarks || '',
+      ward: locationParts.ward,
+      district: locationParts.district,
+      city: locationParts.city
     },
     emergencyTypes: ticketInfo.emergencyTypes || [ticketInfo.emergencyType],
     emergencyType: ticketInfo.emergencyType || ticketInfo.emergencyTypes[0],
@@ -212,7 +236,158 @@ async function createTicketFromInfo(ticketInfo, sessionId, userId = null) {
   await ticket.save();
   console.log(`[Controller] Emergency ticket created: ${ticketId}`);
 
-  return { ticketId, ticket };
+  // AUTO-ASSIGN VEHICLES
+  let assignedVehicles = [];
+  try {
+    console.log('[Controller] Starting vehicle assignment...');
+    
+    // Analyze vehicle requirements using AI
+    const vehicleReqs = await analyzeVehicleRequirements(
+      ticketInfo.description || '',
+      ticketInfo.emergencyTypes || [ticketInfo.emergencyType],
+      ticketInfo.affectedPeople || {}
+    );
+    
+    console.log('[Controller] Vehicle requirements:', vehicleReqs);
+    
+    // Find and assign vehicles
+    if (locationParts.ward && locationParts.city) {
+      assignedVehicles = await vehicleService.findAndAssignVehicles(
+        ticketId,
+        locationParts,
+        ticketInfo.emergencyTypes || [ticketInfo.emergencyType],
+        vehicleReqs
+      );
+      
+      console.log(`[Controller] Assigned ${assignedVehicles.length} vehicles to ticket ${ticketId}`);
+    } else {
+      console.log('[Controller] Cannot assign vehicles: location ward/city not available');
+    }
+  } catch (vehicleError) {
+    console.error('[Controller] Error assigning vehicles:', vehicleError);
+    // Continue even if vehicle assignment fails
+  }
+
+  return { ticketId, ticket, assignedVehicles };
+}
+
+/**
+ * Normalize ward name - thêm "Phường" nếu chưa có
+ * @param {string} wardName - Ward name to normalize
+ * @returns {string} Normalized ward name
+ */
+function normalizeWardName(wardName) {
+  if (!wardName) return null;
+  
+  const trimmed = wardName.trim();
+  const lower = trimmed.toLowerCase();
+  
+  // Nếu đã có "phường" hoặc "xã", giữ nguyên
+  if (lower.startsWith('phường ') || lower.startsWith('xã ')) {
+    return trimmed;
+  }
+  
+  // Thêm "Phường" vào đầu (capitalize first letter)
+  return 'Phường ' + trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+/**
+ * Normalize city name
+ * @param {string} cityName - City name to normalize
+ * @returns {string} Normalized city name
+ */
+function normalizeCityName(cityName) {
+  if (!cityName) return 'Thành phố Hồ Chí Minh';
+  
+  const lower = cityName.toLowerCase().trim();
+  
+  // Map các tên viết tắt về tên đầy đủ
+  if (lower === 'tphcm' || lower === 'hcm' || lower === 'tp.hcm' || 
+      lower === 'tp hcm' || lower === 'sài gòn' || lower === 'saigon') {
+    return 'Thành phố Hồ Chí Minh';
+  }
+  
+  // Nếu đã có "Thành phố Hồ Chí Minh" thì giữ nguyên
+  if (lower.includes('thành phố hồ chí minh') || lower.includes('tp. hồ chí minh')) {
+    return 'Thành phố Hồ Chí Minh';
+  }
+  
+  // Default
+  return 'Thành phố Hồ Chí Minh';
+}
+
+/**
+ * Parse location string to extract ward and city (theo đơn vị hành chính mới - không cần quận/huyện)
+ * @param {Object} ticketInfo - Ticket information
+ * @returns {Object} Parsed location { ward, city }
+ */
+function parseLocation(ticketInfo) {
+  const result = {
+    ward: null,
+    city: 'Thành phố Hồ Chí Minh' // Default city
+  };
+  
+  // Check if locationDetails exists (from state)
+  if (ticketInfo.locationDetails) {
+    const ward = ticketInfo.locationDetails.ward || null;
+    const city = ticketInfo.locationDetails.city || null;
+    return {
+      ward: ward ? normalizeWardName(ward) : null,
+      city: normalizeCityName(city)
+    };
+  }
+  
+  // Try to parse from location string
+  const location = ticketInfo.location || '';
+  
+  // Simple parsing logic - split by comma
+  const parts = location.split(',').map(p => p.trim());
+  
+  // Try to identify parts
+  let foundWard = null;
+  
+  for (const part of parts) {
+    const lowerPart = part.toLowerCase();
+    
+    // Tìm phường/xã (có tiền tố)
+    if (lowerPart.includes('phường') || lowerPart.includes('xã')) {
+      foundWard = part;
+      continue;
+    }
+    
+    // Tìm thành phố
+    if (lowerPart.includes('thành phố') || lowerPart.includes('tp.') || 
+        lowerPart.includes('tỉnh') || lowerPart === 'tphcm' || lowerPart === 'hcm') {
+      result.city = part;
+      continue;
+    }
+    
+    // Bỏ qua phần có số (thường là số nhà, đường)
+    const hasNumber = /\d/.test(part);
+    const isStreetAddress = lowerPart.includes('đường') || 
+                           lowerPart.includes('phố') || 
+                           lowerPart.includes('ngõ') ||
+                           lowerPart.includes('hẻm');
+    
+    if (hasNumber || isStreetAddress) {
+      continue;
+    }
+    
+    // Phần không có số và không phải đường/phố → có thể là tên phường
+    if (!foundWard && part.length > 2 && part.length < 50) {
+      foundWard = part;
+    }
+  }
+  
+  // Normalize ward name (thêm "Phường" nếu cần)
+  result.ward = foundWard ? normalizeWardName(foundWard) : null;
+  
+  // Normalize city name
+  result.city = normalizeCityName(result.city);
+  
+  console.log(`[parseLocation] Input: "${location}" → Ward: "${result.ward}", City: "${result.city}"`);
+  
+  return result;
 }
 
 // Create ticket from chat and get first aid guidance

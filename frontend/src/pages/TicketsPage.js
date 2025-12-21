@@ -224,6 +224,7 @@ function TicketsPage() {
                 <TableCell>Location</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Priority</TableCell>
+                <TableCell>Xe cứu hộ</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
@@ -262,6 +263,23 @@ function TicketsPage() {
                       color={getPriorityColor(ticket.priority)}
                       variant="outlined"
                     />
+                  </TableCell>
+                  <TableCell>
+                    {ticket.assignedVehicles && ticket.assignedVehicles.length > 0 ? (
+                      <Chip
+                        label={`${ticket.assignedVehicles.length} xe`}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
+                    ) : (
+                      <Chip
+                        label="Chưa gán"
+                        size="small"
+                        color="default"
+                        variant="outlined"
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
                     {new Date(ticket.createdAt).toLocaleString()}

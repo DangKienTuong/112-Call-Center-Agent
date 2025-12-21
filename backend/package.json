@@ -13,7 +13,8 @@
     "rag:clear": "node scripts/indexDocuments.js --clear",
     "rag:test": "node scripts/testRag.js",
     "rag:ocr": "python scripts/ocr_pdf.py",
-    "rag:ocr-force": "python scripts/ocr_pdf.py --force"
+    "rag:ocr-force": "python scripts/ocr_pdf.py --force",
+    "seed:vehicles": "node scripts/seedVehicles.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

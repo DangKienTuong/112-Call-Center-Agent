@@ -15,6 +15,8 @@ import TicketsPage from './pages/TicketsPage';
 import TicketDetailPage from './pages/TicketDetailPage';
 import CreateTicketPage from './pages/CreateTicketPage';
 import UsersPage from './pages/UsersPage';
+import VehiclesPage from './pages/VehiclesPage';
+import VehicleDetailPage from './pages/VehicleDetailPage';
 
 // Contexts
 import { AuthProvider } from './contexts/AuthContext';
@@ -115,6 +117,22 @@ function App() {
                     element={
                       <AdminRoute allowedRoles={['admin']}>
                         <UsersPage />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="vehicles"
+                    element={
+                      <AdminRoute allowedRoles={['admin', 'staff']}>
+                        <VehiclesPage />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="vehicles/:id"
+                    element={
+                      <AdminRoute allowedRoles={['admin', 'staff']}>
+                        <VehicleDetailPage />
                       </AdminRoute>
                     }
                   />

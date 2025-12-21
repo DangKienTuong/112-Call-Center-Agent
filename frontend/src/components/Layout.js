@@ -30,7 +30,8 @@ import {
   Language,
   LocalHospital,
   People,
-  AdminPanelSettings
+  AdminPanelSettings,
+  DirectionsCar
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,6 +74,7 @@ function Layout() {
     { text: t('navigation.chat'), icon: <Phone />, path: '/chat', public: true },
     { text: t('navigation.dashboard'), icon: <Dashboard />, path: '/dashboard', roles: ['admin'] },
     { text: t('navigation.tickets'), icon: <Assignment />, path: '/tickets' },
+    { text: 'Quản lý Xe', icon: <DirectionsCar />, path: '/vehicles', roles: ['admin', 'staff'] },
     { text: t('navigation.users'), icon: <People />, path: '/users', roles: ['admin'] }
   ];
 

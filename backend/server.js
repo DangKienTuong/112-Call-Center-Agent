@@ -13,6 +13,7 @@ const ticketRoutes = require('./routes/tickets');
 const chatRoutes = require('./routes/chat');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
+const vehicleRoutes = require('./routes/vehicles');
 
 // Import middleware
 const { errorHandler } = require('./middleware/errorHandler');
@@ -71,6 +72,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

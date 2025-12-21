@@ -71,9 +71,25 @@ async function extractInfoNode(state) {
     if (extracted.emergencyTypes && extracted.emergencyTypes.length > 0) {
       updates.emergencyTypes = extracted.emergencyTypes;
       
-      // Determine required support based on emergency types
-      const support = determineSupportRequired(extracted.emergencyTypes);
-      updates.supportRequired = support;
+      // Only auto-determine support if user didn't explicitly specify it
+      if (!extracted.supportRequired) {
+        const support = determineSupportRequired(extracted.emergencyTypes);
+        updates.supportRequired = support;
+      }
+    }
+    
+    // Update supportRequired if explicitly provided (user correction)
+    // This allows users to adjust forces needed without changing emergency type
+    // Takes priority over auto-determined support from emergencyTypes
+    if (extracted.supportRequired) {
+      // Merge with existing supportRequired to only update specified fields
+      // If emergencyTypes was also updated, merge with the base from that
+      const baseSupport = updates.supportRequired || state.supportRequired;
+      updates.supportRequired = {
+        ...baseSupport,
+        ...extracted.supportRequired
+      };
+      console.log('[ExtractInfo] Updated supportRequired:', updates.supportRequired);
     }
     
     // Update phone if provided
@@ -81,18 +97,27 @@ async function extractInfoNode(state) {
       // Clean phone number
       const cleanPhone = extracted.phone.replace(/[-.\s]/g, '');
       
-      // Validate Vietnamese phone format
-      const phoneValidation = validateVietnamesePhone(cleanPhone);
+      // IMPORTANT: Only validate if this is a NEW phone number (different from current state)
+      // This prevents re-validating an old invalid phone when user provides other info (like address)
+      const currentPhone = state.phone ? state.phone.replace(/[-.\s]/g, '') : null;
       
-      if (phoneValidation.isValid) {
-        // Use normalized phone number
-        updates.phone = phoneValidation.normalized;
-        updates.phoneValidationError = false; // Clear any previous error
-        console.log('[ExtractInfo] Phone validated successfully:', phoneValidation.normalized);
+      if (cleanPhone !== currentPhone) {
+        // This is a new phone number, validate it
+        const phoneValidation = validateVietnamesePhone(cleanPhone);
+        
+        if (phoneValidation.isValid) {
+          // Use normalized phone number
+          updates.phone = phoneValidation.normalized;
+          updates.phoneValidationError = false; // Clear any previous error
+          console.log('[ExtractInfo] Phone validated successfully:', phoneValidation.normalized);
+        } else {
+          // Phone is invalid, don't update phone, set error flag
+          updates.phoneValidationError = true;
+          console.log('[ExtractInfo] Phone validation failed:', phoneValidation.error);
+        }
       } else {
-        // Phone is invalid, don't update phone, set error flag
-        updates.phoneValidationError = true;
-        console.log('[ExtractInfo] Phone validation failed:', phoneValidation.error);
+        // Same phone as before, ignore it (LLM probably extracted from context)
+        console.log('[ExtractInfo] Ignoring phone - same as current state:', cleanPhone);
       }
     }
     
@@ -196,14 +221,19 @@ function fallbackExtraction(message, state) {
     if (match) {
       const cleanPhone = match[0].replace(/[-.\s]/g, '');
       
-      // Validate Vietnamese phone format
-      const phoneValidation = validateVietnamesePhone(cleanPhone);
+      // Only validate if this is a NEW phone number (different from current state)
+      const currentPhone = state.phone ? state.phone.replace(/[-.\s]/g, '') : null;
       
-      if (phoneValidation.isValid) {
-        updates.phone = phoneValidation.normalized;
-        updates.phoneValidationError = false;
-      } else {
-        updates.phoneValidationError = true;
+      if (cleanPhone !== currentPhone) {
+        // Validate Vietnamese phone format
+        const phoneValidation = validateVietnamesePhone(cleanPhone);
+        
+        if (phoneValidation.isValid) {
+          updates.phone = phoneValidation.normalized;
+          updates.phoneValidationError = false;
+        } else {
+          updates.phoneValidationError = true;
+        }
       }
       break;
     }

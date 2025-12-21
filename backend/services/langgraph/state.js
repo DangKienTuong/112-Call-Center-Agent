@@ -203,9 +203,16 @@ function hasCompleteLocation(location) {
 function hasAllRequiredInfo(state) {
   const hasLocation = hasCompleteLocation(state.location);
   const hasEmergencyType = state.emergencyTypes && state.emergencyTypes.length > 0;
+  
   // Check phone from state or from userMemory (for authenticated users)
-  const hasPhone = (state.phone && state.phone.length >= 9) ||
-                   (state.isAuthenticated && state.userMemory?.savedPhone);
+  // But validate userMemory phone first
+  let hasPhone = state.phone && state.phone.length >= 9;
+  if (!hasPhone && state.isAuthenticated && state.userMemory?.savedPhone) {
+    const { validateVietnamesePhone } = require('../utils/phoneValidator');
+    const validation = validateVietnamesePhone(state.userMemory.savedPhone);
+    hasPhone = validation.isValid;
+  }
+  
   const hasAffectedPeople = state.affectedPeople.total > 0;
 
   return hasLocation && hasEmergencyType && hasPhone && hasAffectedPeople;
@@ -223,12 +230,18 @@ function getMissingInfo(state) {
   if (!state.emergencyTypes || state.emergencyTypes.length === 0) {
     missing.push('emergency');
   }
-  // Check phone from state or from userMemory
-  const hasPhone = state.phone ||
-                   (state.isAuthenticated && state.userMemory?.savedPhone);
+  
+  // Check phone from state or from userMemory (but validate it)
+  let hasPhone = state.phone && state.phone.length >= 9;
+  if (!hasPhone && state.isAuthenticated && state.userMemory?.savedPhone) {
+    const { validateVietnamesePhone } = require('../utils/phoneValidator');
+    const validation = validateVietnamesePhone(state.userMemory.savedPhone);
+    hasPhone = validation.isValid;
+  }
   if (!hasPhone) {
     missing.push('phone');
   }
+  
   if (state.affectedPeople.total === 0) {
     missing.push('people');
   }
@@ -257,7 +270,20 @@ function buildTicketInfo(state) {
   ].filter(Boolean);
 
   // Use phone from state, or fallback to userMemory for authenticated users
-  const phone = state.phone || (state.userMemory?.savedPhone) || null;
+  // But validate before using
+  let phone = state.phone || null;
+  if (!phone && state.userMemory?.savedPhone) {
+    // Validate phone from user memory before using
+    const { validateVietnamesePhone } = require('../utils/phoneValidator');
+    const validation = validateVietnamesePhone(state.userMemory.savedPhone);
+    if (validation.isValid) {
+      phone = validation.normalized;
+    } else {
+      console.warn('[buildTicketInfo] Invalid phone in userMemory, skipping:', state.userMemory.savedPhone);
+      phone = null;
+    }
+  }
+  
   // Use name from state, or fallback to userMemory for authenticated users
   const reporterName = state.reporter?.name ||
                        (state.userMemory?.savedName) ||

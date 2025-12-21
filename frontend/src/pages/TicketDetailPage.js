@@ -37,7 +37,11 @@ import {
   LocalHospital,
   LocalFireDepartment,
   Security,
-  Build
+  Build,
+  DirectionsCar,
+  CheckCircle,
+  Schedule,
+  LocationSearching
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
@@ -302,6 +306,128 @@ function TicketDetailPage() {
                   <Typography variant="h6">{ticket.affectedPeople?.deceased || 0}</Typography>
                 </Grid>
               </Grid>
+            </CardContent>
+          </Card>
+
+          {/* Assigned Vehicles */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <DirectionsCar color="primary" />
+                <Typography variant="h6">Xe cứu hộ được điều động</Typography>
+                {ticket.assignedVehicles && ticket.assignedVehicles.length > 0 && (
+                  <Chip 
+                    size="small" 
+                    label={`${ticket.assignedVehicles.length} xe`}
+                    color="primary"
+                  />
+                )}
+              </Box>
+              
+              {!ticket.assignedVehicles || ticket.assignedVehicles.length === 0 ? (
+                <Alert severity="info" icon={<DirectionsCar />}>
+                  Chưa có xe cứu hộ được điều động cho phiếu này
+                </Alert>
+              ) : (
+                <List dense>
+                  {ticket.assignedVehicles.map((vehicle, index) => (
+                    <ListItem
+                      key={index}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        mb: 1,
+                        bgcolor: 'background.paper',
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }}
+                    >
+                      <Box width="100%">
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Box>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              {vehicle.type === 'AMBULANCE' && <LocalHospital color="error" fontSize="small" />}
+                              {vehicle.type === 'POLICE' && <Security color="primary" fontSize="small" />}
+                              {vehicle.type === 'FIRE_TRUCK' && <LocalFireDepartment color="warning" fontSize="small" />}
+                              <Typography variant="body1" fontWeight="bold">
+                                {vehicle.type === 'AMBULANCE' && '🚑 Xe cấp cứu'}
+                                {vehicle.type === 'POLICE' && '🚓 Xe công an'}
+                                {vehicle.type === 'FIRE_TRUCK' && '🚒 Xe cứu hỏa'}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ ml: 3 }}>
+                              Biển số: <strong>{vehicle.licensePlate}</strong> • Mã: <strong>{vehicle.vehicleId}</strong>
+                            </Typography>
+                          </Box>
+                          <Chip
+                            size="small"
+                            label={
+                              vehicle.status === 'DISPATCHED' ? 'Đã điều động' :
+                              vehicle.status === 'EN_ROUTE' ? 'Đang di chuyển' :
+                              vehicle.status === 'ON_SCENE' ? 'Đã đến hiện trường' :
+                              vehicle.status === 'COMPLETED' ? 'Hoàn thành' :
+                              'Không xác định'
+                            }
+                            color={
+                              vehicle.status === 'COMPLETED' ? 'success' :
+                              vehicle.status === 'ON_SCENE' ? 'warning' :
+                              vehicle.status === 'EN_ROUTE' ? 'info' :
+                              'primary'
+                            }
+                            icon={
+                              vehicle.status === 'COMPLETED' ? <CheckCircle /> :
+                              vehicle.status === 'ON_SCENE' ? <LocationSearching /> :
+                              <Schedule />
+                            }
+                          />
+                        </Box>
+                        <Divider sx={{ my: 1 }} />
+                        <Box display="flex" gap={3} mt={1} flexWrap="wrap">
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              <Schedule fontSize="inherit" /> Thời gian điều động
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              {vehicle.assignedAt ? new Date(vehicle.assignedAt).toLocaleString('vi-VN', {
+                                dateStyle: 'short',
+                                timeStyle: 'short'
+                              }) : 'N/A'}
+                            </Typography>
+                          </Box>
+                          {vehicle.arrivedAt && (
+                            <Box>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                <LocationSearching fontSize="inherit" /> Thời gian đến
+                              </Typography>
+                              <Typography variant="body2" fontWeight="medium" color="warning.main">
+                                {new Date(vehicle.arrivedAt).toLocaleString('vi-VN', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short'
+                                })}
+                              </Typography>
+                            </Box>
+                          )}
+                          {vehicle.completedAt && (
+                            <Box>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                <CheckCircle fontSize="inherit" /> Thời gian hoàn thành
+                              </Typography>
+                              <Typography variant="body2" fontWeight="medium" color="success.main">
+                                {new Date(vehicle.completedAt).toLocaleString('vi-VN', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short'
+                                })}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
             </CardContent>
           </Card>
 

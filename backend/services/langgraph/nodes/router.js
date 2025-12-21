@@ -41,11 +41,14 @@ async function routerNode(state) {
         shouldCreateTicket: true,
       };
     } else {
-      console.log('[Router] User correcting info -> back to collection');
+      // User is correcting/updating info
+      // The extractInfo node will have already extracted the corrections
+      // After extraction, we should show confirmation again (not ask other questions)
+      console.log('[Router] User correcting info -> will show updated confirmation');
       return {
-        confirmationShown: false,
+        confirmationShown: false, // Reset so it will show again
         userConfirmed: false,
-        currentStep: determineNextStep(state),
+        currentStep: 'confirm', // Go directly back to confirmation
       };
     }
   }
@@ -94,8 +97,18 @@ function determineNextStep(state) {
   }
 
   // Priority 4: Phone (contact number for responders)
-  // Skip if authenticated user has phone from userMemory
-  const hasPhoneFromMemory = state.isAuthenticated && state.userMemory?.savedPhone;
+  // Skip if authenticated user has phone from userMemory (but validate it first)
+  let hasPhoneFromMemory = false;
+  if (state.isAuthenticated && state.userMemory?.savedPhone) {
+    // Validate phone from user memory
+    const { validateVietnamesePhone } = require('../../../utils/phoneValidator');
+    const validation = validateVietnamesePhone(state.userMemory.savedPhone);
+    hasPhoneFromMemory = validation.isValid;
+    if (!validation.isValid) {
+      console.log('[Router] Phone from userMemory is invalid:', state.userMemory.savedPhone);
+    }
+  }
+  
   const hasValidPhone = state.phone && state.phone.length >= 9;
 
   // If phone validation failed, go back to collectPhone to ask again
@@ -120,15 +133,30 @@ function determineNextStep(state) {
  * Check if user is confirming information using LLM
  */
 async function checkUserConfirmation(message) {
-  // Quick keyword check first
-  const confirmKeywords = ['đúng', 'xác nhận', 'ok', 'yes', 'đúng rồi', 'chính xác', 'đồng ý', 'oke', 'ừ', 'uh', 'vâng', 'được'];
   const lowerMessage = message.toLowerCase().trim();
   
-  if (confirmKeywords.some(keyword => lowerMessage.includes(keyword))) {
+  // Check for CORRECTION keywords first (higher priority)
+  const correctionKeywords = [
+    'không', 'sai', 'nhầm', 'không phải', 'chưa đúng', 'sửa', 'thay đổi', 
+    'không đúng', 'xin lỗi', 'sorry', 'chỉnh', 'đổi', 'khác', 'không chính xác',
+    'cập nhật', 'thực ra', 'thật ra'
+  ];
+  
+  // If message contains correction keywords, it's NOT a confirmation
+  if (correctionKeywords.some(keyword => lowerMessage.includes(keyword))) {
+    console.log('[Router] Detected correction keyword, not a confirmation');
+    return false;
+  }
+  
+  // Quick keyword check for confirmation (only if no correction keywords)
+  const confirmKeywords = ['đúng', 'xác nhận', 'ok', 'yes', 'đúng rồi', 'chính xác', 'đồng ý', 'oke', 'ừ', 'uh', 'vâng', 'được'];
+  
+  // Check if it's a simple, short confirmation (avoid false positives like "địa chỉ đúng là...")
+  if (lowerMessage.length < 20 && confirmKeywords.some(keyword => lowerMessage === keyword || lowerMessage.startsWith(keyword + ' ') || lowerMessage.endsWith(' ' + keyword))) {
     return true;
   }
   
-  // If not obvious, use LLM to check
+  // If message is longer or ambiguous, use LLM to check
   try {
     const model = new ChatOpenAI({
       modelName: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
@@ -140,14 +168,26 @@ async function checkUserConfirmation(message) {
     const result = await confirmationModel.invoke(`
 Người dùng vừa được hỏi xác nhận thông tin. Họ trả lời: "${message}"
 
+QUAN TRỌNG:
+- Nếu họ đang SỬA/CHỈNH/THAY ĐỔI bất kỳ thông tin nào → isConfirming = false, isCorrection = true
+- Nếu họ nói có SỰ NHẦM LẪN hoặc XIN LỖI → isConfirming = false, isCorrection = true
+- Chỉ khi họ ĐỒNG Ý/XÁC NHẬN đơn giản → isConfirming = true, isCorrection = false
+
+Ví dụ:
+- "đúng" → isConfirming = true, isCorrection = false
+- "xin lỗi, địa chỉ đúng là..." → isConfirming = false, isCorrection = true
+- "không phải, tôi cần..." → isConfirming = false, isCorrection = true
+
 Họ có đang xác nhận (đồng ý với thông tin) hay đang sửa/phản đối?
     `);
     
+    console.log('[Router] LLM confirmation check result:', result);
     return result.isConfirming && !result.isCorrection;
   } catch (error) {
     console.error('[Router] Error checking confirmation:', error);
-    // Fallback to keyword check
-    return false;
+    // Fallback: if message is very short and has confirm keyword, assume confirm
+    // Otherwise assume correction to be safe
+    return lowerMessage.length < 10 && confirmKeywords.some(k => lowerMessage.includes(k));
   }
 }
 
