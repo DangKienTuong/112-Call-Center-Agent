@@ -332,3 +332,6 @@ Sau khi implement, test theo thứ tự:
 - OpenAI Embeddings: https://platform.openai.com/docs/guides/embeddings
 - MongoDB: https://www.mongodb.com/
 
+
+
+

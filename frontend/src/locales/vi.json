@@ -213,5 +213,18 @@
       "addressRequired": "Vui lòng nhập địa chỉ",
       "descriptionRequired": "Vui lòng mô tả tình huống"
     }
+  },
+  "validation": {
+    "phone": {
+      "invalid": "Số điện thoại không hợp lệ",
+      "empty": "Số điện thoại không được để trống",
+      "format": "Số điện thoại phải có 10 chữ số và bắt đầu bằng số 0 (ví dụ: 0912345678) hoặc định dạng +84 (ví dụ: +84912345678)",
+      "invalidPrefix": "Đầu số không hợp lệ tại Việt Nam. Các đầu số hợp lệ: 09x, 03x, 07x, 08x, 05x",
+      "length": "Số điện thoại phải có đúng 10 chữ số",
+      "international": "Số điện thoại quốc tế phải có định dạng +84 theo sau bởi 9 chữ số",
+      "mustStartWith": "Số điện thoại phải bắt đầu bằng số 0 hoặc +84",
+      "validExamples": "Ví dụ: 0912345678, +84912345678",
+      "hint": "Nhập số điện thoại 10 chữ số (09x, 03x, 07x, 08x, 05x)"
+    }
   }
 }

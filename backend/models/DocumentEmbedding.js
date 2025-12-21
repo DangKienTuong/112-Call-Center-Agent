@@ -111,3 +111,6 @@ documentEmbeddingSchema.statics.getStats = async function() {
 
 module.exports = mongoose.model('DocumentEmbedding', documentEmbeddingSchema);
 
+
+
+

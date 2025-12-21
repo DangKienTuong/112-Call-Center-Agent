@@ -90,6 +90,12 @@ const EmergencyStateAnnotation = Annotation.Root({
     reducer: (prev, next) => next || prev,
     default: () => null,
   }),
+
+  // Track if phone validation failed
+  phoneValidationError: Annotation({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
   
   affectedPeople: Annotation({
     reducer: (prev, next) => next ? { ...prev, ...next } : prev,

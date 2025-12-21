@@ -1,5 +1,6 @@
 const { ChatOpenAI } = require('@langchain/openai');
 const { ExtractedInfoSchema, createExtractionPrompt, determineSupportRequired } = require('../tools/extractors');
+const { validateVietnamesePhone } = require('../../../utils/phoneValidator');
 
 /**
  * Extract Information Node
@@ -79,7 +80,20 @@ async function extractInfoNode(state) {
     if (extracted.phone) {
       // Clean phone number
       const cleanPhone = extracted.phone.replace(/[-.\s]/g, '');
-      updates.phone = cleanPhone;
+      
+      // Validate Vietnamese phone format
+      const phoneValidation = validateVietnamesePhone(cleanPhone);
+      
+      if (phoneValidation.isValid) {
+        // Use normalized phone number
+        updates.phone = phoneValidation.normalized;
+        updates.phoneValidationError = false; // Clear any previous error
+        console.log('[ExtractInfo] Phone validated successfully:', phoneValidation.normalized);
+      } else {
+        // Phone is invalid, don't update phone, set error flag
+        updates.phoneValidationError = true;
+        console.log('[ExtractInfo] Phone validation failed:', phoneValidation.error);
+      }
     }
     
     // Update affected people if provided
@@ -180,7 +194,17 @@ function fallbackExtraction(message, state) {
   for (const pattern of phonePatterns) {
     const match = message.match(pattern);
     if (match) {
-      updates.phone = match[0].replace(/[-.\s]/g, '');
+      const cleanPhone = match[0].replace(/[-.\s]/g, '');
+      
+      // Validate Vietnamese phone format
+      const phoneValidation = validateVietnamesePhone(cleanPhone);
+      
+      if (phoneValidation.isValid) {
+        updates.phone = phoneValidation.normalized;
+        updates.phoneValidationError = false;
+      } else {
+        updates.phoneValidationError = true;
+      }
       break;
     }
   }

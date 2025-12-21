@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { validateVietnamesePhone } = require('../utils/phoneValidator');
 
 const ticketSchema = new mongoose.Schema({
   ticketId: {
@@ -19,7 +20,17 @@ const ticketSchema = new mongoose.Schema({
     },
     phone: {
       type: String,
-      required: true
+      required: true,
+      validate: {
+        validator: function(v) {
+          const validation = validateVietnamesePhone(v);
+          return validation.isValid;
+        },
+        message: props => {
+          const validation = validateVietnamesePhone(props.value);
+          return validation.error || 'Số điện thoại không hợp lệ';
+        }
+      }
     },
     email: String
   },

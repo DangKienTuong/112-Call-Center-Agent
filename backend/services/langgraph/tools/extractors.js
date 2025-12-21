@@ -23,7 +23,7 @@ const ExtractedInfoSchema = z.object({
     - MEDICAL: tai nạn, bị thương, bệnh nặng, ngất, bất tỉnh, cấp cứu
     - SECURITY: trộm, cướp, đánh nhau, giết người, gây rối trật tự`),
   
-  phone: z.string().optional().describe('Số điện thoại liên hệ (format: 0xxxxxxxxx hoặc +84xxxxxxxxx)'),
+  phone: z.string().optional().describe('Số điện thoại liên hệ Việt Nam (10 chữ số bắt đầu bằng 09/03/07/08/05 hoặc +84 theo sau 9 chữ số). Ví dụ: 0912345678 hoặc +84912345678'),
   
   affectedPeople: z.object({
     total: z.number().optional().describe('Tổng số người bị ảnh hưởng'),
@@ -89,7 +89,10 @@ Quy tắc quan trọng:
    - Từ khóa tai nạn/bị thương/bất tỉnh/cấp cứu → MEDICAL
    - Có thể có nhiều loại cùng lúc
 5. Địa chỉ phải đầy đủ: số nhà, đường, phường/xã, thành phố
-6. Số điện thoại phải là số Việt Nam (0xxxxxxxxx hoặc +84xxxxxxxxx)
+6. Số điện thoại PHẢI là số Việt Nam hợp lệ:
+   - 10 chữ số bắt đầu bằng: 09x, 03x, 07x, 08x, 05x (ví dụ: 0912345678)
+   - HOẶC +84 theo sau 9 chữ số (ví dụ: +84912345678)
+   - Trích xuất CHÍNH XÁC số điện thoại từ tin nhắn, giữ nguyên format
 
 Trích xuất thông tin:`;
 }

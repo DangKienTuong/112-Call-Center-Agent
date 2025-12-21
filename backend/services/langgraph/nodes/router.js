@@ -98,6 +98,11 @@ function determineNextStep(state) {
   const hasPhoneFromMemory = state.isAuthenticated && state.userMemory?.savedPhone;
   const hasValidPhone = state.phone && state.phone.length >= 9;
 
+  // If phone validation failed, go back to collectPhone to ask again
+  if (state.phoneValidationError) {
+    return 'phone';
+  }
+
   if (!hasValidPhone && !hasPhoneFromMemory) {
     return 'phone';
   }

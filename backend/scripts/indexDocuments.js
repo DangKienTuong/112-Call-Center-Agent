@@ -183,3 +183,6 @@ if (require.main === module) {
 
 module.exports = { indexDocuments, displayStats, clearEmbeddings };
 
+
+
+

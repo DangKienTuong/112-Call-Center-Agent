@@ -2,11 +2,29 @@ const Ticket = require('../models/Ticket');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const { validateVietnamesePhone } = require('../utils/phoneValidator');
 
 // Create new ticket
 exports.createTicket = async (req, res) => {
   try {
     const ticketData = req.body;
+
+    // Validate phone number
+    if (ticketData.reporter && ticketData.reporter.phone) {
+      const phoneValidation = validateVietnamesePhone(ticketData.reporter.phone);
+      
+      if (!phoneValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Số điện thoại không hợp lệ',
+          error: phoneValidation.error,
+          field: 'reporter.phone'
+        });
+      }
+
+      // Normalize phone number to domestic format
+      ticketData.reporter.phone = phoneValidation.normalized;
+    }
 
     // Add operator if authenticated
     if (req.user) {

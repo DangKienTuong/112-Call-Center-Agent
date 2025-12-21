@@ -9,6 +9,7 @@ A comprehensive web-based emergency response system for Vietnam's national emerg
 - **RAG System**: Retrieval-Augmented Generation with MongoDB for evidence-based first aid guidance
 - **Real-time Communication**: Socket.io integration for live updates and emergency notifications
 - **Ticket Management System**: Complete CRUD operations for emergency tickets
+- **Phone Validation**: Vietnamese phone number validation to filter fake reports (09x, 03x, 07x, 08x, 05x)
 - **PDF Generation**: Export emergency tickets as PDF documents
 - **Multi-language Support**: Vietnamese and English language options
 - **Responsive Design**: Fully responsive UI for desktop, tablet, and mobile devices
@@ -317,6 +318,27 @@ npm run rag:clear
 3. When a user reports an emergency, the system retrieves relevant document chunks
 4. LLM generates contextual first aid guidance based on retrieved documents
 5. Response includes specific instructions from official medical/fire safety documents
+
+## Phone Validation
+
+The system implements comprehensive Vietnamese phone number validation to filter fake reports:
+
+### Features
+- **Valid formats**: 10 digits (09x, 03x, 07x, 08x, 05x) or international (+84)
+- **Auto-normalization**: Cleans and standardizes phone numbers
+- **Multi-layer validation**: Both frontend and backend validation
+- **User-friendly**: Supports spaces, dashes, and parentheses in input
+
+### Testing Phone Validation
+```bash
+cd backend
+node tests/phoneValidator.test.js
+```
+
+### Documentation
+- Backend: [backend/docs/PHONE_VALIDATION.md](backend/docs/PHONE_VALIDATION.md)
+- Frontend: [frontend/src/docs/PHONE_VALIDATION_USAGE.md](frontend/src/docs/PHONE_VALIDATION_USAGE.md)
+- Feature Overview: [PHONE_VALIDATION_FEATURE.md](PHONE_VALIDATION_FEATURE.md)
 
 ## Testing
 

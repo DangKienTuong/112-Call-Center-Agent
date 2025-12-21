@@ -67,11 +67,20 @@ async function collectEmergencyNode(state) {
  */
 async function collectPhoneNode(state) {
   console.log('[CollectPhone] Current phone:', state.phone);
+  console.log('[CollectPhone] Phone validation error:', state.phoneValidationError);
   
-  const prompt = 'Cho tôi số điện thoại để lực lượng cứu hộ liên hệ.';
+  let prompt = '';
+  
+  // Check if previous phone validation failed
+  if (state.phoneValidationError) {
+    prompt = '❌ Số điện thoại chưa đúng định dạng. Vui lòng cung cấp lại số điện thoại hợp lệ (10 chữ số bắt đầu bằng 09, 03, 07, 08, 05 hoặc định dạng +84). Ví dụ: 0912345678 hoặc +84912345678.';
+  } else {
+    prompt = 'Cho tôi số điện thoại để lực lượng cứu hộ liên hệ.';
+  }
   
   return {
     response: prompt,
+    phoneValidationError: false, // Reset error flag after showing message
     messages: [{
       role: 'operator',
       message: prompt,
