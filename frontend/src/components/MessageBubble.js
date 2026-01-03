@@ -29,7 +29,7 @@ function MessageBubble({ message }) {
           {isOperator && (
             <Chip
               icon={<Support />}
-              label="Operator"
+              label="112 Helper"
               size="small"
               color="primary"
               sx={{ height: 20 }}

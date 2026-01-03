@@ -17,7 +17,9 @@ import {
   Menu,
   MenuItem,
   Tooltip,
-  Collapse
+  Collapse,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -33,7 +35,8 @@ import {
   History,
   ExpandMore,
   ExpandLess,
-  Mic
+  Mic,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
@@ -50,6 +53,8 @@ import { useAuth } from '../contexts/AuthContext';
 function ChatPage() {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -298,6 +303,16 @@ function ChatPage() {
       <Paper sx={{ p: 2, mb: 2, background: 'linear-gradient(45deg, #d32f2f 30%, #ff5722 90%)' }}>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center">
+            {isMobile && (
+              <IconButton
+                color="inherit"
+                edge="start"
+                onClick={() => window.dispatchEvent(new CustomEvent('toggleDrawer'))}
+                sx={{ mr: 1, color: 'white' }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
             <LocalHospital sx={{ fontSize: 40, color: 'white', mr: 2 }} />
             <Box>
               <Typography variant="h4" color="white" fontWeight="bold">
@@ -492,23 +507,6 @@ function ChatPage() {
             </Collapse>
           )}
 
-          {/* Guest prompt */}
-          {!isAuthenticated && (
-            <Paper sx={{ p: 2, mb: 2, bgcolor: 'info.light' }}>
-              <Typography variant="body2" color="info.contrastText">
-                <Login sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
-                {t('auth.loginPrompt')}
-              </Typography>
-              <Button
-                size="small"
-                variant="text"
-                onClick={() => setAuthModalOpen(true)}
-                sx={{ mt: 1, color: 'info.contrastText' }}
-              >
-                {t('auth.loginOrRegister')}
-              </Button>
-            </Paper>
-          )}
 
           {/* Instructions */}
           <Paper sx={{ p: 2 }}>

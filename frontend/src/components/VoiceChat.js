@@ -73,34 +73,27 @@ function VoiceChat({
     fullTranscript
   } = useVoiceChat('vi'); // Chỉ hỗ trợ tiếng Việt
 
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(false); // Mặc định tắt voice
+  const [hasUsedVoice, setHasUsedVoice] = useState(false); // Track xem user đã dùng voice chưa
   const [lastSpokenMessage, setLastSpokenMessage] = useState(null);
   const lastTranscriptRef = useRef('');
   const autoSendTimeoutRef = useRef(null);
   const isManualStop = useRef(false);
   const wasSpeaking = useRef(false);
 
-  // Auto-speak operator responses when enabled
+  // Auto-speak operator responses when enabled AND user has used voice before
   useEffect(() => {
     if (
       autoSpeak &&
       voiceEnabled &&
+      hasUsedVoice && // Chỉ tự động đọc nếu người dùng đã sử dụng voice
       lastOperatorMessage &&
       lastOperatorMessage !== lastSpokenMessage
     ) {
-      // Reset manual stop when new message comes to allow auto-conversation to continue
-      // UNLESS we want strict manual stop to persist until manual start?
-      // Usually if the bot replies, we want to continue the flow. 
-      // But if user stopped it, maybe they want it stopped.
-      // Let's keep isManualStop as is, but if the user manually stopped, 
-      // they might not want auto-speak either? 
-      // The current logic only guards auto-restart of recording. 
-      // Auto-speak is guarded by voiceEnabled.
-
       speak(lastOperatorMessage, 'vi');
       setLastSpokenMessage(lastOperatorMessage);
     }
-  }, [lastOperatorMessage, autoSpeak, voiceEnabled, speak, lastSpokenMessage]);
+  }, [lastOperatorMessage, autoSpeak, voiceEnabled, hasUsedVoice, speak, lastSpokenMessage]);
 
   // Handle auto-restart of recording after speaking finishes
   useEffect(() => {
@@ -158,6 +151,11 @@ function VoiceChat({
       isManualStop.current = false;
       lastTranscriptRef.current = '';
       clearTranscript();
+      
+      // Đánh dấu người dùng đã sử dụng voice và bật voice mode
+      setHasUsedVoice(true);
+      setVoiceEnabled(true);
+      
       startRecording();
     }
   }, [isRecording, isPlaying, stopRecording, startRecording, clearTranscript]);
@@ -178,9 +176,8 @@ function VoiceChat({
         stopPlayback();
       }
     } else {
-      // If re-enabling, we might want to reset manual stop?
-      // Or let user manually start recording first.
-      // Let's leave it as is, user needs to likely click mic to start interaction.
+      // Khi bật voice, đánh dấu user đã sử dụng voice
+      setHasUsedVoice(true);
     }
   }, [voiceEnabled, isPlaying, stopPlayback]);
 

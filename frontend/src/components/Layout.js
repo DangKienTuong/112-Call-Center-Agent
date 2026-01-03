@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -51,6 +51,13 @@ function Layout() {
     setMobileOpen(!mobileOpen);
   };
 
+  // Listen for custom event from ChatPage to toggle drawer
+  useEffect(() => {
+    const handleToggle = () => setMobileOpen(prev => !prev);
+    window.addEventListener('toggleDrawer', handleToggle);
+    return () => window.removeEventListener('toggleDrawer', handleToggle);
+  }, []);
+
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -71,6 +78,9 @@ function Layout() {
     { text: 'Quản lý Xe', icon: <DirectionsCar />, path: '/vehicles', roles: ['admin', 'staff'] },
     { text: t('navigation.users'), icon: <People />, path: '/users', roles: ['admin'] }
   ];
+
+  // Check if we're on the chat page (hide auth buttons since ChatPage has its own)
+  const isOnChatPage = location.pathname === '/chat';
 
   const drawer = (
     <Box>
@@ -108,60 +118,62 @@ function Layout() {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          background: 'linear-gradient(45deg, #d32f2f 30%, #ff5722 90%)'
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {t('app.title')}
-          </Typography>
+      {!isOnChatPage && (
+        <AppBar
+          position="fixed"
+          sx={{
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            ml: { sm: `${drawerWidth}px` },
+            background: 'linear-gradient(45deg, #d32f2f 30%, #ff5722 90%)'
+          }}
+        >
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+              {t('app.title')}
+            </Typography>
 
-          {user ? (
-            <>
-              <Button
-                color="inherit"
-                onClick={handleProfileMenuOpen}
-                startIcon={<Person />}
-              >
-                {user.username}
+            {user ? (
+              <>
+                <Button
+                  color="inherit"
+                  onClick={handleProfileMenuOpen}
+                  startIcon={<Person />}
+                >
+                  {user.username}
+                </Button>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleProfileMenuClose}
+                >
+                  <MenuItem onClick={() => navigate('/profile')}>
+                    <Person sx={{ mr: 1 }} /> {t('navigation.profile')}
+                  </MenuItem>
+                  <MenuItem onClick={() => navigate('/settings')}>
+                    <Settings sx={{ mr: 1 }} /> {t('navigation.settings')}
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem onClick={handleLogout}>
+                    <Logout sx={{ mr: 1 }} /> {t('auth.logout')}
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <Button color="inherit" onClick={() => navigate('/login')}>
+                {t('auth.login')}
               </Button>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleProfileMenuClose}
-              >
-                <MenuItem onClick={() => navigate('/profile')}>
-                  <Person sx={{ mr: 1 }} /> {t('navigation.profile')}
-                </MenuItem>
-                <MenuItem onClick={() => navigate('/settings')}>
-                  <Settings sx={{ mr: 1 }} /> {t('navigation.settings')}
-                </MenuItem>
-                <Divider />
-                <MenuItem onClick={handleLogout}>
-                  <Logout sx={{ mr: 1 }} /> {t('auth.logout')}
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
-            <Button color="inherit" onClick={() => navigate('/login')}>
-              {t('auth.login')}
-            </Button>
-          )}
-        </Toolbar>
-      </AppBar>
+            )}
+          </Toolbar>
+        </AppBar>
+      )}
 
       <Box
         component="nav"
@@ -195,9 +207,9 @@ function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: isOnChatPage ? 0 : 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8
+          mt: isOnChatPage ? 0 : 8
         }}
       >
         <Outlet />
