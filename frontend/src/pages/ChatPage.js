@@ -32,7 +32,8 @@ import {
   Logout,
   History,
   ExpandMore,
-  ExpandLess
+  ExpandLess,
+  Mic
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
@@ -43,6 +44,7 @@ import TicketSummary from '../components/TicketSummary';
 import AuthModal from '../components/AuthModal';
 import ChatHistory from '../components/ChatHistory';
 import MyTickets from '../components/MyTickets';
+import VoiceChat from '../components/VoiceChat';
 import { useAuth } from '../contexts/AuthContext';
 
 function ChatPage() {
@@ -61,6 +63,9 @@ function ChatPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Voice chat state
+  const [lastOperatorMessage, setLastOperatorMessage] = useState(null);
 
   useEffect(() => {
     // Generate session ID
@@ -117,6 +122,7 @@ function ChatPage() {
       };
 
       setMessages(prev => [...prev, operatorMessage]);
+      setLastOperatorMessage(responseData.response);
 
       // Update ticket info
       if (responseData.ticketInfo) {
@@ -165,6 +171,21 @@ function ChatPage() {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Handle voice transcript update
+  const handleVoiceTranscript = (transcript) => {
+    setInputMessage(transcript);
+  };
+
+  // Handle voice send message
+  const handleVoiceSendMessage = (message) => {
+    if (!message.trim()) return;
+    setInputMessage(message);
+    // Trigger send after state update
+    setTimeout(() => {
+      handleSendMessage();
+    }, 0);
   };
 
   // Load a previous chat session
@@ -344,8 +365,16 @@ function ChatPage() {
             </Box>
 
             {/* Input Area */}
-            <Box sx={{ p: 2, backgroundColor: 'white', borderTop: '1px solid #e0e0e0' }}>
-              <Box display="flex" gap={1}>
+            <Box sx={{ p: 2, backgroundColor: 'white', borderTop: '1px solid #e0e0e0', position: 'relative' }}>
+              <Box display="flex" gap={1} alignItems="flex-end">
+                {/* Voice Chat Component */}
+                <VoiceChat
+                  onTranscript={handleVoiceTranscript}
+                  onSendMessage={handleVoiceSendMessage}
+                  autoSpeak={true}
+                  lastOperatorMessage={lastOperatorMessage}
+                  disabled={isLoading}
+                />
                 <TextField
                   fullWidth
                   multiline

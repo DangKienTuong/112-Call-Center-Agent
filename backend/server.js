@@ -14,6 +14,7 @@ const chatRoutes = require('./routes/chat');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const vehicleRoutes = require('./routes/vehicles');
+const voiceRoutes = require('./routes/voice');
 
 // Import middleware
 const { errorHandler } = require('./middleware/errorHandler');
@@ -73,6 +74,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/voice', voiceRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

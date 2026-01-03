@@ -226,5 +226,23 @@
       "validExamples": "Ví dụ: 0912345678, +84912345678",
       "hint": "Nhập số điện thoại 10 chữ số (09x, 03x, 07x, 08x, 05x)"
     }
+  },
+  "voice": {
+    "startRecording": "Bắt đầu ghi âm",
+    "stopRecording": "Dừng ghi âm",
+    "listening": "Đang nghe...",
+    "transcript": "Nội dung ghi âm:",
+    "send": "Gửi",
+    "clear": "Xóa",
+    "enableVoice": "Bật giọng nói",
+    "disableVoice": "Tắt giọng nói",
+    "notSupported": "Trình duyệt không hỗ trợ ghi âm giọng nói",
+    "microphoneDenied": "Quyền truy cập micro bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt.",
+    "noSpeechDetected": "Không phát hiện giọng nói. Vui lòng thử lại.",
+    "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối.",
+    "speakingResponse": "Đang phát phản hồi...",
+    "voiceMode": "Chế độ giọng nói",
+    "pressToSpeak": "Nhấn để nói",
+    "releaseToSend": "Thả để gửi"
   }
 }
