@@ -173,19 +173,56 @@ function ChatPage() {
     }
   };
 
-  // Handle voice transcript update
+  // Handle voice transcript update (for live display in input)
   const handleVoiceTranscript = (transcript) => {
     setInputMessage(transcript);
   };
 
-  // Handle voice send message
-  const handleVoiceSendMessage = (message) => {
-    if (!message.trim()) return;
-    setInputMessage(message);
-    // Trigger send after state update
-    setTimeout(() => {
-      handleSendMessage();
-    }, 0);
+  // Handle voice send message (direct send without confirmation)
+  const handleVoiceSendMessage = async (message) => {
+    if (!message.trim() || isLoading) return;
+
+    const userMessage = {
+      role: 'reporter',
+      message: message,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await chatService.processMessage({
+        message: message,
+        sessionId,
+        context: messages
+      });
+
+      const responseData = response.data.data;
+
+      const operatorMessage = {
+        role: 'operator',
+        message: responseData.response,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, operatorMessage]);
+      setLastOperatorMessage(responseData.response);
+
+      if (responseData.ticketInfo) {
+        setTicketInfo(responseData.ticketInfo);
+      }
+
+      if (responseData.shouldCreateTicket && !currentTicket) {
+        handleCreateTicket(responseData.ticketInfo);
+      }
+    } catch (error) {
+      console.error('Error processing voice message:', error);
+      toast.error(t('chat.errorProcessing'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Load a previous chat session

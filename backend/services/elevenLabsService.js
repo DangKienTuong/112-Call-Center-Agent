@@ -5,14 +5,24 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || 'sk_d7b756414d1df0d
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
 // Voice IDs for different languages
-// Using high-quality multilingual voices
+// Using high-quality multilingual voices optimized for each language
 const VOICES = {
-  vi: 'XB0fDUnXU5powFXDhCwa', // Charlotte - supports Vietnamese
-  en: 'EXAVITQu4vr4xnSDxMaL'  // Sarah - English native speaker
+  // Vietnamese voices - natural, clear, standard Vietnamese pronunciation
+  vi: '9BWtsMINqrJLrRacOk9x',  // Aria - excellent Vietnamese support with multilingual v2
+  // English voices - natural American English
+  en: 'EXAVITQu4vr4xnSDxMaL'   // Sarah - clear English native speaker
 };
 
-// Fallback multilingual voice that supports both
-const MULTILINGUAL_VOICE = 'XB0fDUnXU5powFXDhCwa';
+// Alternative Vietnamese voices to try if primary doesn't work well
+const VIETNAMESE_VOICES = {
+  aria: '9BWtsMINqrJLrRacOk9x',      // Aria - recommended for Vietnamese
+  charlotte: 'XB0fDUnXU5powFXDhCwa', // Charlotte - multilingual
+  jessica: 'cgSgspJ2msm6clMCkdW9',   // Jessica - warm voice
+  matilda: 'XrExE9yKIg1WjnnlVkGX'    // Matilda - clear voice
+};
+
+// Fallback multilingual voice that supports both languages
+const MULTILINGUAL_VOICE = '9BWtsMINqrJLrRacOk9x';
 
 /**
  * Convert text to speech using ElevenLabs API
@@ -128,5 +138,6 @@ module.exports = {
   textToSpeech,
   textToSpeechStream,
   getVoices,
-  VOICES
+  VOICES,
+  VIETNAMESE_VOICES
 };

@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   IconButton,
   Typography,
-  Paper,
   CircularProgress,
   Tooltip,
   Fade,
-  Collapse,
-  Alert,
   Chip,
   keyframes
 } from '@mui/material';
@@ -67,7 +64,6 @@ function VoiceChat({
     recordingError,
     isPlaying,
     isTTSLoading,
-    playbackError,
     startRecording,
     stopRecording,
     speak,
@@ -77,9 +73,10 @@ function VoiceChat({
     fullTranscript
   } = useVoiceChat(currentLanguage);
 
-  const [showTranscript, setShowTranscript] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [lastSpokenMessage, setLastSpokenMessage] = useState(null);
+  const lastTranscriptRef = useRef('');
+  const autoSendTimeoutRef = useRef(null);
 
   // Auto-speak operator responses when enabled
   useEffect(() => {
@@ -94,7 +91,32 @@ function VoiceChat({
     }
   }, [lastOperatorMessage, autoSpeak, voiceEnabled, speak, currentLanguage, lastSpokenMessage]);
 
-  // Notify parent of transcript changes
+  // Auto-send transcript when recording stops (realtime mode)
+  useEffect(() => {
+    if (!isRecording && transcript && transcript !== lastTranscriptRef.current) {
+      // Clear any existing timeout
+      if (autoSendTimeoutRef.current) {
+        clearTimeout(autoSendTimeoutRef.current);
+      }
+
+      // Auto-send immediately when recording stops
+      autoSendTimeoutRef.current = setTimeout(() => {
+        if (transcript && onSendMessage) {
+          onSendMessage(transcript);
+          lastTranscriptRef.current = transcript;
+          clearTranscript();
+        }
+      }, 300); // Small delay to ensure final transcript is captured
+    }
+
+    return () => {
+      if (autoSendTimeoutRef.current) {
+        clearTimeout(autoSendTimeoutRef.current);
+      }
+    };
+  }, [isRecording, transcript, onSendMessage, clearTranscript]);
+
+  // Notify parent of transcript changes (for input field sync)
   useEffect(() => {
     if (onTranscript && fullTranscript) {
       onTranscript(fullTranscript);
@@ -105,36 +127,16 @@ function VoiceChat({
   const handleToggleRecording = useCallback(() => {
     if (isRecording) {
       stopRecording();
-      setShowTranscript(true);
     } else {
+      // Stop playback if playing
+      if (isPlaying) {
+        stopPlayback();
+      }
+      lastTranscriptRef.current = '';
       clearTranscript();
       startRecording();
-      setShowTranscript(true);
     }
-  }, [isRecording, stopRecording, startRecording, clearTranscript]);
-
-  // Handle sending the transcript as a message
-  const handleSendTranscript = useCallback(() => {
-    if (transcript && onSendMessage) {
-      onSendMessage(transcript);
-      clearTranscript();
-      setShowTranscript(false);
-    }
-  }, [transcript, onSendMessage, clearTranscript]);
-
-  // Handle keyboard shortcut (Enter to send)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && !isRecording && transcript) {
-        handleSendTranscript();
-      }
-    };
-
-    if (showTranscript) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [showTranscript, isRecording, transcript, handleSendTranscript]);
+  }, [isRecording, isPlaying, stopRecording, startRecording, clearTranscript, stopPlayback]);
 
   // Toggle voice enabled
   const handleToggleVoice = useCallback(() => {
@@ -203,7 +205,7 @@ function VoiceChat({
       <Tooltip title={isRecording ? t('voice.stopRecording') : t('voice.startRecording')}>
         <IconButton
           onClick={handleToggleRecording}
-          disabled={disabled || isPlaying}
+          disabled={disabled}
           sx={{
             backgroundColor: isRecording ? 'error.main' : 'primary.main',
             color: 'white',
@@ -222,85 +224,42 @@ function VoiceChat({
         </IconButton>
       </Tooltip>
 
-      {/* Recording Status */}
+      {/* Recording Status with Live Transcript */}
       {isRecording && (
         <Fade in>
-          <Chip
-            icon={<RecordVoiceOver />}
-            label={t('voice.listening')}
-            color="error"
-            size="small"
-            sx={{ animation: `${pulse} 1.5s infinite` }}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              icon={<RecordVoiceOver />}
+              label={t('voice.listening')}
+              color="error"
+              size="small"
+              sx={{ animation: `${pulse} 1.5s infinite` }}
+            />
+            {fullTranscript && (
+              <Typography
+                variant="body2"
+                sx={{
+                  maxWidth: 200,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  color: 'text.secondary',
+                  fontStyle: 'italic'
+                }}
+              >
+                "{fullTranscript}"
+              </Typography>
+            )}
+          </Box>
         </Fade>
       )}
 
-      {/* Transcript Panel */}
-      <Collapse in={showTranscript && (fullTranscript || recordingError)}>
-        <Paper
-          elevation={3}
-          sx={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            right: 0,
-            mb: 1,
-            p: 2,
-            maxHeight: 200,
-            overflow: 'auto',
-            backgroundColor: isRecording ? 'rgba(211, 47, 47, 0.05)' : 'background.paper'
-          }}
-        >
-          {recordingError ? (
-            <Alert severity="error" sx={{ mb: 1 }}>
-              {recordingError}
-            </Alert>
-          ) : null}
-
-          {fullTranscript && (
-            <>
-              <Typography variant="caption" color="textSecondary" gutterBottom>
-                {t('voice.transcript')}
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 1 }}>
-                {transcript}
-                {interimTranscript && (
-                  <Typography component="span" color="textSecondary">
-                    {interimTranscript}
-                  </Typography>
-                )}
-              </Typography>
-
-              {!isRecording && transcript && (
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <Chip
-                    label={t('voice.send')}
-                    color="primary"
-                    onClick={handleSendTranscript}
-                    sx={{ cursor: 'pointer' }}
-                  />
-                  <Chip
-                    label={t('voice.clear')}
-                    variant="outlined"
-                    onClick={() => {
-                      clearTranscript();
-                      setShowTranscript(false);
-                    }}
-                    sx={{ cursor: 'pointer' }}
-                  />
-                </Box>
-              )}
-            </>
-          )}
-        </Paper>
-      </Collapse>
-
-      {/* Playback Error */}
-      {playbackError && (
+      {/* Error Display */}
+      {recordingError && (
         <Fade in>
-          <Alert severity="warning" sx={{ ml: 1 }}>
-            {playbackError}
-          </Alert>
+          <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+            {recordingError}
+          </Typography>
         </Fade>
       )}
     </Box>
