@@ -54,8 +54,7 @@ function VoiceChat({
   lastOperatorMessage = null,
   disabled = false
 }) {
-  const { t, i18n } = useTranslation();
-  const currentLanguage = i18n.language?.startsWith('vi') ? 'vi' : 'en';
+  const { t } = useTranslation();
 
   const {
     isRecording,
@@ -63,6 +62,7 @@ function VoiceChat({
     interimTranscript,
     recordingError,
     isPlaying,
+    isSpeaking,
     isTTSLoading,
     startRecording,
     stopRecording,
@@ -71,12 +71,14 @@ function VoiceChat({
     clearTranscript,
     isSupported,
     fullTranscript
-  } = useVoiceChat(currentLanguage);
+  } = useVoiceChat('vi'); // Chỉ hỗ trợ tiếng Việt
 
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [lastSpokenMessage, setLastSpokenMessage] = useState(null);
   const lastTranscriptRef = useRef('');
   const autoSendTimeoutRef = useRef(null);
+  const isManualStop = useRef(false);
+  const wasSpeaking = useRef(false);
 
   // Auto-speak operator responses when enabled
   useEffect(() => {
@@ -86,10 +88,30 @@ function VoiceChat({
       lastOperatorMessage &&
       lastOperatorMessage !== lastSpokenMessage
     ) {
-      speak(lastOperatorMessage, currentLanguage);
+      // Reset manual stop when new message comes to allow auto-conversation to continue
+      // UNLESS we want strict manual stop to persist until manual start?
+      // Usually if the bot replies, we want to continue the flow. 
+      // But if user stopped it, maybe they want it stopped.
+      // Let's keep isManualStop as is, but if the user manually stopped, 
+      // they might not want auto-speak either? 
+      // The current logic only guards auto-restart of recording. 
+      // Auto-speak is guarded by voiceEnabled.
+
+      speak(lastOperatorMessage, 'vi');
       setLastSpokenMessage(lastOperatorMessage);
     }
-  }, [lastOperatorMessage, autoSpeak, voiceEnabled, speak, currentLanguage, lastSpokenMessage]);
+  }, [lastOperatorMessage, autoSpeak, voiceEnabled, speak, lastSpokenMessage]);
+
+  // Handle auto-restart of recording after speaking finishes
+  useEffect(() => {
+    if (wasSpeaking.current && !isSpeaking) {
+      // Just finished speaking
+      if (voiceEnabled && !isManualStop.current) {
+        startRecording();
+      }
+    }
+    wasSpeaking.current = isSpeaking;
+  }, [isSpeaking, voiceEnabled, startRecording]);
 
   // Auto-send transcript when recording stops (realtime mode)
   useEffect(() => {
@@ -126,24 +148,39 @@ function VoiceChat({
   // Handle recording toggle
   const handleToggleRecording = useCallback(() => {
     if (isRecording) {
+      isManualStop.current = true;
       stopRecording();
     } else {
       // Stop playback if playing
       if (isPlaying) {
-        stopPlayback();
+        handleStopPlayback();
       }
+      isManualStop.current = false;
       lastTranscriptRef.current = '';
       clearTranscript();
       startRecording();
     }
-  }, [isRecording, isPlaying, stopRecording, startRecording, clearTranscript, stopPlayback]);
+  }, [isRecording, isPlaying, stopRecording, startRecording, clearTranscript]);
+
+  // Handle stop playback manually
+  const handleStopPlayback = useCallback(() => {
+    isManualStop.current = true;
+    stopPlayback();
+  }, [stopPlayback]);
 
   // Toggle voice enabled
   const handleToggleVoice = useCallback(() => {
     const newValue = !voiceEnabled;
     setVoiceEnabled(newValue);
-    if (!newValue && isPlaying) {
-      stopPlayback();
+    if (!newValue) {
+      isManualStop.current = true;
+      if (isPlaying) {
+        stopPlayback();
+      }
+    } else {
+      // If re-enabling, we might want to reset manual stop?
+      // Or let user manually start recording first.
+      // Let's leave it as is, user needs to likely click mic to start interaction.
     }
   }, [voiceEnabled, isPlaying, stopPlayback]);
 
@@ -194,7 +231,7 @@ function VoiceChat({
                 ))}
               </Box>
             )}
-            <IconButton size="small" onClick={stopPlayback}>
+            <IconButton size="small" onClick={handleStopPlayback}>
               <Stop fontSize="small" />
             </IconButton>
           </Box>

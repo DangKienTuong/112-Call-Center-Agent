@@ -25,6 +25,9 @@ export function useVoiceChat(language = 'vi') {
   const audioQueueRef = useRef([]);
   const isProcessingQueueRef = useRef(false);
 
+  // State for speaking status (queue processing)
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   // Check browser support
   const isSupported = voiceService.isSpeechRecognitionSupported();
 
@@ -112,6 +115,10 @@ export function useVoiceChat(language = 'vi') {
       setIsPlaying(false);
     }
 
+    // Also reset speaking state if we force start recording
+    setIsSpeaking(false);
+    audioQueueRef.current = [];
+
     // Request microphone access first
     try {
       await voiceService.requestMicrophoneAccess();
@@ -152,6 +159,7 @@ export function useVoiceChat(language = 'vi') {
     }
 
     isProcessingQueueRef.current = true;
+    setIsSpeaking(true);
 
     while (audioQueueRef.current.length > 0) {
       const { text, lang } = audioQueueRef.current[0];
@@ -188,6 +196,7 @@ export function useVoiceChat(language = 'vi') {
     }
 
     isProcessingQueueRef.current = false;
+    setIsSpeaking(false);
   }, []);
 
   /**
@@ -211,6 +220,7 @@ export function useVoiceChat(language = 'vi') {
     }
     audioQueueRef.current = [];
     setIsPlaying(false);
+    setIsSpeaking(false);
     setIsTTSLoading(false);
   }, []);
 
@@ -250,6 +260,7 @@ export function useVoiceChat(language = 'vi') {
 
     // Playback state
     isPlaying,
+    isSpeaking,
     isTTSLoading,
     playbackError,
 

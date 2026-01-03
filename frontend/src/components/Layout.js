@@ -27,7 +27,6 @@ import {
   Settings,
   Person,
   Logout,
-  Language,
   LocalHospital,
   People,
   AdminPanelSettings,
@@ -41,7 +40,7 @@ const drawerWidth = 240;
 function Layout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,11 +62,6 @@ function Layout() {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const changeLanguage = () => {
-    const newLang = i18n.language === 'vi' ? 'en' : 'vi';
-    i18n.changeLanguage(newLang);
   };
 
   const menuItems = [
@@ -134,10 +128,6 @@ function Layout() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {t('app.title')}
           </Typography>
-
-          <IconButton color="inherit" onClick={changeLanguage}>
-            <Language />
-          </IconButton>
 
           {user ? (
             <>
