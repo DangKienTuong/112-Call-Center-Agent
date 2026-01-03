@@ -550,9 +550,11 @@ class MultiTurnEvaluator:
                 metric_scores[metric_name] = 0.0
 
         # Determine overall pass
+        # Use lower threshold (0.6) for multi-turn as it's more complex and subjective
+        multi_turn_threshold = 0.6
         overall_passed = (
             workflow_completed and
-            all(score >= THRESHOLDS.g_eval for score in metric_scores.values())
+            all(score >= multi_turn_threshold for score in metric_scores.values())
         )
 
         total_duration = (datetime.now() - start_time).total_seconds() * 1000

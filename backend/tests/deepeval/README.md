@@ -42,7 +42,7 @@ npm run dev
 # Full evaluation (~1000 test cases)
 python run_evaluation.py
 
-# Quick evaluation (50 test cases)
+# Quick evaluation (10 test cases)
 python run_evaluation.py --quick
 
 # Specific category
@@ -143,7 +143,7 @@ backend/tests/deepeval/
 python run_evaluation.py --help
 
 Options:
-  --quick              Run quick evaluation (50 cases)
+  --quick              Run quick evaluation (10 cases)
   --category CATEGORY  Evaluate specific category
   --max-cases N        Limit to N test cases
   --output-dir PATH    Output directory for reports

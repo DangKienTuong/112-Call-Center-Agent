@@ -13,7 +13,7 @@ Usage:
     # Multi-turn conversation evaluation
     python run_evaluation.py --multi-turn
 
-    # Quick evaluation (50 test cases)
+    # Quick evaluation (10 test cases)
     python run_evaluation.py --quick
 
     # Both single and multi-turn
@@ -160,7 +160,7 @@ async def run_single_turn_evaluation(args, output_dir: Path, timestamp: str) -> 
         print(f"  Filtered to category '{args.category}': {len(test_cases)} cases")
 
     if args.quick:
-        max_cases = args.max_cases or 50
+        max_cases = args.max_cases or 10
         test_cases = test_cases[:max_cases]
         print(f"  Quick mode: limited to {len(test_cases)} cases")
     elif args.max_cases:

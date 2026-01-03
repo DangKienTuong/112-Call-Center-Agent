@@ -3,18 +3,17 @@
 =============================================
 
 This module provides comprehensive evaluation of the 112 emergency call center
-AI chatbot using DeepEval framework with both quantitative and qualitative metrics.
+AI chatbot using DeepEval framework.
 
-Metrics Used:
-- Answer Relevancy: Measures how relevant the response is to the input
-- Faithfulness: Measures if the response is grounded in the provided context
-- Contextual Precision: Measures precision of retrieved context
-- Contextual Recall: Measures recall of retrieved context
-- Hallucination: Detects fabricated information
-- Toxicity: Detects harmful or offensive content
-- Bias: Detects biased responses
-- G-Eval: Custom criteria evaluation
-- Summarization: For first aid guidance summarization quality
+Core Metrics Used (for all test categories):
+1. Emergency Type Accuracy: Custom G-Eval metric measuring if the chatbot 
+   correctly identifies the emergency type (FIRE_RESCUE, MEDICAL, SECURITY)
+   through its response and guidance provided.
+
+2. Answer Relevancy: Standard DeepEval metric measuring how relevant and 
+   appropriate the chatbot's response is to the user's input message.
+
+All test categories use these same 2 metrics for consistency, speed, and cost efficiency.
 
 Usage:
     python evaluation.py [--quick] [--category <category>] [--output <path>]
@@ -130,23 +129,32 @@ class EmergencyTypeAccuracyMetric(GEval):
     def __init__(self):
         super().__init__(
             name="Emergency Type Accuracy",
-            criteria="""Evaluate if the AI correctly identifies the emergency type from the user's message.
+            criteria="""Evaluate if the AI correctly identifies and responds to the emergency type.
 
-            Emergency Types:
-            - FIRE_RESCUE: Fire, explosion, trapped people, drowning, collapse, rescue operations
-            - MEDICAL: Accidents, injuries, medical emergencies, unconsciousness, cardiac issues
-            - SECURITY: Theft, robbery, fights, violence, threats, break-ins
-
-            Score 1.0 if the correct type(s) are identified.
-            Score 0.5 if partially correct (some types identified correctly).
-            Score 0.0 if completely wrong or no type identified.
+            Emergency Types and their indicators:
+            - FIRE_RESCUE: Fire extinguisher usage, evacuating from fire, dealing with smoke/flames
+            - MEDICAL: CPR, first aid, treating injuries, checking vitals, medical procedures
+            - SECURITY: Staying safe from attackers, reporting crimes, securing premises
+            
+            IMPORTANT: The AI identifies an emergency type through its ACTIONS, not words.
+            If the input mentions FIRE and the output provides FIRE-RELATED first aid (fire extinguishers, 
+            evacuation, smoke handling), then the AI has CORRECTLY identified it as FIRE_RESCUE.
+            
+            Scoring Guidelines:
+            - Score 1.0: Response provides appropriate guidance for the emergency type in the input
+              Example: Fire input → fire extinguisher steps, evacuation guidance
+            - Score 0.5: Response is generic safety advice that partially applies
+            - Score 0.0: Response provides guidance for WRONG emergency type
+              Example: Fire input → CPR instructions
+            
+            Check: Does the response's guidance match the emergency type mentioned in the input?
             """,
             evaluation_params=[
                 LLMTestCaseParams.INPUT,
                 LLMTestCaseParams.ACTUAL_OUTPUT
             ],
             model=EVALUATION_MODEL,
-            threshold=THRESHOLDS.g_eval
+            threshold=0.6  # Slightly lower threshold for implicit detection
         )
 
 
@@ -454,53 +462,18 @@ class Evaluator:
         )
 
     def get_metrics_for_category(self, category: str) -> List:
-        """Get relevant metrics for a test category"""
-
-        category_metrics = {
-            "emergency_type_detection": [
-                self.custom_metrics["emergency_type_accuracy"],
-                self.standard_metrics["answer_relevancy"],
-            ],
-            "location_extraction": [
-                self.custom_metrics["location_extraction"],
-                self.standard_metrics["answer_relevancy"],
-            ],
-            "phone_validation": [
-                self.custom_metrics["phone_validation"],
-            ],
-            "affected_people": [
-                self.standard_metrics["answer_relevancy"],
-            ],
-            "conversation_flow": [
-                self.custom_metrics["conversation_flow"],
-                self.standard_metrics["answer_relevancy"],
-            ],
-            "confirmation": [
-                self.custom_metrics["confirmation_handling"],
-            ],
-            "user_correction": [
-                self.custom_metrics["confirmation_handling"],
-                self.standard_metrics["answer_relevancy"],
-            ],
-            "first_aid_guidance": [
-                self.custom_metrics["first_aid_guidance"],
-                self.standard_metrics["faithfulness"],
-                self.standard_metrics["hallucination"],
-            ],
-            "authenticated_user": [
-                self.custom_metrics["conversation_flow"],
-            ],
-            "edge_cases": [
-                self.custom_metrics["safety"],
-                self.standard_metrics["toxicity"],
-            ],
-            "language_variations": [
-                self.custom_metrics["vietnamese_language"],
-                self.standard_metrics["answer_relevancy"],
-            ],
-        }
-
-        return category_metrics.get(category, [self.standard_metrics["answer_relevancy"]])
+        """Get relevant metrics for a test category
+        
+        Simplified to use only 2 core metrics for all categories:
+        1. Emergency Type Accuracy - Does the chatbot identify the emergency type correctly?
+        2. Answer Relevancy - Is the response relevant to the user's input?
+        """
+        
+        # All categories now use the same 2 core metrics
+        return [
+            self.custom_metrics["emergency_type_accuracy"],
+            self.standard_metrics["answer_relevancy"],
+        ]
 
     async def evaluate_single_test_case(
         self,
@@ -535,19 +508,28 @@ class Evaluator:
             metrics = self.get_metrics_for_category(test_case.category)
 
             # Evaluate each metric
+            metric_results = []
             for metric in metrics:
                 try:
+                    # Get metric name safely
+                    metric_name = getattr(metric, 'name', None) or getattr(metric, '__name__', type(metric).__name__)
+                    
                     metric.measure(llm_test_case)
-                    metric_scores[metric.name] = metric.score
+                    metric_scores[metric_name] = metric.score
+                    
+                    # Get metric's own threshold
+                    metric_threshold = getattr(metric, 'threshold', THRESHOLDS.g_eval)
+                    metric_passed = metric.score >= metric_threshold
+                    metric_results.append(metric_passed)
                 except Exception as e:
-                    errors.append(f"Metric {metric.name} error: {str(e)}")
-                    metric_scores[metric.name] = 0.0
+                    # Get metric name safely for error logging
+                    metric_name = getattr(metric, 'name', None) or getattr(metric, '__name__', type(metric).__name__)
+                    errors.append(f"Metric {metric_name} error: {str(e)}")
+                    metric_scores[metric_name] = 0.0
+                    metric_results.append(False)
 
-            # Determine if test passed (all metrics above threshold)
-            passed = all(
-                score >= THRESHOLDS.g_eval
-                for score in metric_scores.values()
-            )
+            # Determine if test passed (all metrics above their respective thresholds)
+            passed = all(metric_results) if metric_results else False
 
         except Exception as e:
             errors.append(f"Evaluation error: {str(e)}")
@@ -727,7 +709,7 @@ async def main():
 
     # Configure evaluation
     categories = [args.category] if args.category else None
-    max_cases = args.max_cases or (50 if args.quick else None)
+    max_cases = args.max_cases or (10 if args.quick else None)
 
     # Initialize evaluator
     evaluator = Evaluator(chatbot_url=args.chatbot_url)

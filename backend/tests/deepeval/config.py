@@ -6,8 +6,18 @@ This module contains configuration settings for the DeepEval evaluation framewor
 """
 
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Dict, Any
+
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # python-dotenv not installed, use system environment variables
 
 # API Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")

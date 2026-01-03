@@ -53,59 +53,76 @@ def generate_html_report(
     avg_metrics = data.summary.get("average_metrics", {})
     category_rates = data.summary.get("category_pass_rates", {})
 
-    # Generate category data for charts
-    categories_json = json.dumps(list(category_rates.keys()))
-    category_values_json = json.dumps(list(category_rates.values()))
+    # No chart data generation needed for simplified report
 
-    # Generate metric data for charts
-    metric_names_json = json.dumps(list(avg_metrics.keys()))
-    metric_values_json = json.dumps([round(v * 100, 1) for v in avg_metrics.values()])
-
-    # Generate test results table rows
+    # Generate test results table rows with expandable details
     results_rows = ""
-    for result in data.results:
+    for idx, result in enumerate(data.results):
         status_class = "passed" if result.get("passed") else "failed"
-        status_icon = "" if result.get("passed") else ""
+        status_icon = "✅" if result.get("passed") else "❌"
         metrics_str = ", ".join([
             f"{k}: {v:.2f}" for k, v in result.get("metrics", {}).items()
         ])
         errors_str = "; ".join(result.get("errors", [])) or "None"
+        
+        # Escape HTML characters in messages
+        input_msg = result.get('input_message', '').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+        actual_output = result.get('actual_output', '').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+        expected_output = result.get('expected_output', '').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 
         results_rows += f"""
-        <tr class="result-row {status_class}">
+        <tr class="result-row {status_class}" onclick="toggleDetails('details-{idx}')">
             <td class="status-cell">{status_icon}</td>
             <td><code>{result.get('test_case_id', 'N/A')}</code></td>
             <td><span class="category-badge">{result.get('category', 'N/A')}</span></td>
             <td><span class="subcategory-text">{result.get('subcategory', 'N/A')}</span></td>
-            <td class="input-cell" title="{result.get('input_message', '')[:200]}">{result.get('input_message', '')[:50]}...</td>
+            <td class="input-cell" title="{input_msg[:200]}">{input_msg[:50]}...</td>
             <td class="metrics-cell">{metrics_str}</td>
             <td class="duration-cell">{result.get('duration_ms', 0):.0f}ms</td>
-            <td class="errors-cell" title="{errors_str}">{errors_str[:30]}...</td>
+            <td class="expand-cell">👁️ View</td>
+        </tr>
+        <tr id="details-{idx}" class="details-row" style="display: none;">
+            <td colspan="8">
+                <div class="details-content">
+                    <div class="detail-section">
+                        <h4>📝 Input Message:</h4>
+                        <div class="detail-text">{input_msg}</div>
+                    </div>
+                    <div class="detail-section">
+                        <h4>🤖 Actual Chatbot Response:</h4>
+                        <div class="detail-text response-text">{actual_output}</div>
+                    </div>
+                    <div class="detail-section">
+                        <h4>✓ Expected Output:</h4>
+                        <div class="detail-text">{expected_output}</div>
+                    </div>
+                    <div class="detail-section">
+                        <h4>📊 Metrics:</h4>
+                        <div class="detail-text">{metrics_str}</div>
+                    </div>
+                    {f'<div class="detail-section error-section"><h4>⚠️ Errors:</h4><div class="detail-text">{errors_str}</div></div>' if result.get('errors') else ''}
+                </div>
+            </td>
         </tr>
         """
 
-    # Generate category summary cards
-    category_cards = ""
-    for category, rate in category_rates.items():
-        color_class = "success" if rate >= 80 else ("warning" if rate >= 60 else "danger")
-        category_cards += f"""
-        <div class="category-card {color_class}">
-            <h4>{category.replace('_', ' ').title()}</h4>
-            <div class="rate">{rate:.1f}%</div>
-            <div class="bar">
-                <div class="bar-fill" style="width: {rate}%"></div>
-            </div>
-        </div>
-        """
-
-    # Generate metric summary cards
+    # Generate metric summary cards - ONLY 2 core metrics
+    core_metrics = ["Emergency Type Accuracy", "Answer Relevancy"]
     metric_cards = ""
     for metric, value in avg_metrics.items():
+        # Only show the 2 core metrics
+        if metric not in core_metrics:
+            continue
+            
         score_pct = value * 100
         color_class = "success" if score_pct >= 70 else ("warning" if score_pct >= 50 else "danger")
+        
+        # Add emoji for each metric
+        emoji = "🎯" if metric == "Emergency Type Accuracy" else "💬"
+        
         metric_cards += f"""
         <div class="metric-card {color_class}">
-            <h4>{metric.replace('_', ' ').title()}</h4>
+            <h4>{emoji} {metric}</h4>
             <div class="score">{score_pct:.1f}%</div>
             <div class="bar">
                 <div class="bar-fill" style="width: {score_pct}%"></div>
@@ -237,10 +254,12 @@ def generate_html_report(
             border-bottom: 2px solid var(--border);
         }}
 
-        .category-grid, .metric-grid {{
+        .metric-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
         }}
 
         .category-card, .metric-card {{
@@ -358,8 +377,71 @@ def generate_html_report(
             text-overflow: ellipsis;
         }}
 
+        .expand-cell {{
+            text-align: center;
+            cursor: pointer;
+            color: var(--primary);
+            font-size: 0.875rem;
+        }}
+
+        .expand-cell:hover {{
+            color: var(--primary);
+            text-decoration: underline;
+        }}
+
+        .details-row {{
+            background: var(--bg) !important;
+        }}
+
+        .details-content {{
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+        }}
+
+        .detail-section {{
+            margin-bottom: 1.5rem;
+        }}
+
+        .detail-section:last-child {{
+            margin-bottom: 0;
+        }}
+
+        .detail-section h4 {{
+            font-size: 0.875rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }}
+
+        .detail-text {{
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }}
+
+        .response-text {{
+            background: #f0f9ff;
+            border-color: var(--primary);
+        }}
+
+        .error-section .detail-text {{
+            background: #fef2f2;
+            border-color: var(--danger);
+            color: var(--danger);
+        }}
+
+        .result-row {{
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+
         .table-container {{
-            max-height: 600px;
+            max-height: 800px;
             overflow-y: auto;
             border-radius: 8px;
             border: 1px solid var(--border);
@@ -422,68 +504,28 @@ def generate_html_report(
             <p>DeepEval Comprehensive Evaluation | Generated: {data.timestamp}</p>
         </header>
 
-        <!-- Summary Cards -->
-        <div class="summary-grid">
-            <div class="summary-card primary">
-                <h3>Total Test Cases</h3>
-                <div class="value">{total}</div>
-            </div>
-            <div class="summary-card success">
-                <h3>Passed</h3>
-                <div class="value">{passed}</div>
-            </div>
-            <div class="summary-card danger">
-                <h3>Failed</h3>
-                <div class="value">{failed}</div>
-            </div>
-            <div class="summary-card {'success' if pass_rate >= 80 else 'warning' if pass_rate >= 60 else 'danger'}">
-                <h3>Pass Rate</h3>
-                <div class="value">{pass_rate:.1f}%</div>
-            </div>
-        </div>
-
-        <!-- Charts -->
-        <div class="charts-section">
-            <div class="chart-card">
-                <h3>Pass/Fail Distribution</h3>
-                <canvas id="passFailChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h3>Category Performance</h3>
-                <canvas id="categoryChart"></canvas>
-            </div>
-        </div>
-
-        <div class="charts-section">
-            <div class="chart-card">
-                <h3>Metric Scores</h3>
-                <canvas id="metricChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h3>Test Duration Distribution</h3>
-                <canvas id="durationChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Category Breakdown -->
+        <!-- Metric Analysis - Only 2 Core Metrics -->
         <div class="section">
-            <h2>Category Performance</h2>
-            <div class="category-grid">
-                {category_cards}
-            </div>
-        </div>
-
-        <!-- Metric Breakdown -->
-        <div class="section">
-            <h2>Metric Analysis</h2>
+            <h2>📊 Metric Analysis</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                Evaluation based on 2 core metrics: Emergency Type Accuracy and Answer Relevancy
+            </p>
             <div class="metric-grid">
                 {metric_cards}
             </div>
         </div>
 
+        <!-- Test Duration Distribution Chart -->
+        <div class="section">
+            <h2>⏱️ Test Duration Distribution</h2>
+            <div class="chart-card">
+                <canvas id="durationChart"></canvas>
+            </div>
+        </div>
+
         <!-- Detailed Results -->
         <div class="section">
-            <h2>Detailed Test Results</h2>
+            <h2>📋 Detailed Test Results</h2>
 
             <div class="filters">
                 <button class="filter-btn active" onclick="filterResults('all')">All</button>
@@ -503,7 +545,7 @@ def generate_html_report(
                             <th>Input</th>
                             <th>Metrics</th>
                             <th>Duration</th>
-                            <th>Errors</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -520,82 +562,9 @@ def generate_html_report(
     </div>
 
     <script>
-        // Pass/Fail Pie Chart
-        new Chart(document.getElementById('passFailChart'), {{
-            type: 'doughnut',
-            data: {{
-                labels: ['Passed', 'Failed'],
-                datasets: [{{
-                    data: [{passed}, {failed}],
-                    backgroundColor: ['#16a34a', '#dc2626'],
-                    borderWidth: 0
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                plugins: {{
-                    legend: {{
-                        position: 'bottom'
-                    }}
-                }}
-            }}
-        }});
-
-        // Category Bar Chart
-        new Chart(document.getElementById('categoryChart'), {{
-            type: 'bar',
-            data: {{
-                labels: {categories_json},
-                datasets: [{{
-                    label: 'Pass Rate (%)',
-                    data: {category_values_json},
-                    backgroundColor: '#2563eb',
-                    borderRadius: 4
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                scales: {{
-                    y: {{
-                        beginAtZero: true,
-                        max: 100
-                    }}
-                }},
-                plugins: {{
-                    legend: {{
-                        display: false
-                    }}
-                }}
-            }}
-        }});
-
-        // Metric Radar Chart
-        new Chart(document.getElementById('metricChart'), {{
-            type: 'radar',
-            data: {{
-                labels: {metric_names_json},
-                datasets: [{{
-                    label: 'Score (%)',
-                    data: {metric_values_json},
-                    backgroundColor: 'rgba(37, 99, 235, 0.2)',
-                    borderColor: '#2563eb',
-                    pointBackgroundColor: '#2563eb'
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                scales: {{
-                    r: {{
-                        beginAtZero: true,
-                        max: 100
-                    }}
-                }}
-            }}
-        }});
-
-        // Duration Distribution
+        // Duration Distribution Chart
         const durations = {json.dumps([r.get('duration_ms', 0) for r in data.results])};
-        const durationBins = [0, 100, 500, 1000, 2000, 5000, 10000];
+        const durationBins = [0, 5000, 10000, 15000, 20000, 30000, 50000];
         const durationCounts = new Array(durationBins.length - 1).fill(0);
 
         durations.forEach(d => {{
@@ -610,19 +579,36 @@ def generate_html_report(
         new Chart(document.getElementById('durationChart'), {{
             type: 'bar',
             data: {{
-                labels: ['<100ms', '100-500ms', '500ms-1s', '1-2s', '2-5s', '5-10s'],
+                labels: ['<5s', '5-10s', '10-15s', '15-20s', '20-30s', '30-50s'],
                 datasets: [{{
-                    label: 'Test Cases',
+                    label: 'Number of Test Cases',
                     data: durationCounts,
-                    backgroundColor: '#d97706',
-                    borderRadius: 4
+                    backgroundColor: '#2563eb',
+                    borderRadius: 8
                 }}]
             }},
             options: {{
                 responsive: true,
+                maintainAspectRatio: true,
+                scales: {{
+                    y: {{
+                        beginAtZero: true,
+                        ticks: {{
+                            stepSize: 10
+                        }}
+                    }}
+                }},
                 plugins: {{
                     legend: {{
-                        display: false
+                        display: true,
+                        position: 'top'
+                    }},
+                    title: {{
+                        display: true,
+                        text: 'Distribution of test execution times',
+                        font: {{
+                            size: 14
+                        }}
                     }}
                 }}
             }}
@@ -630,7 +616,7 @@ def generate_html_report(
 
         // Filter functionality
         function filterResults(filter) {{
-            const rows = document.querySelectorAll('.result-row');
+            const rows = document.querySelectorAll('.result-row:not(.details-row)');
             const buttons = document.querySelectorAll('.filter-btn');
 
             buttons.forEach(btn => btn.classList.remove('active'));
@@ -649,13 +635,23 @@ def generate_html_report(
 
         // Search functionality
         function searchResults(query) {{
-            const rows = document.querySelectorAll('.result-row');
+            const rows = document.querySelectorAll('.result-row:not(.details-row)');
             const lowerQuery = query.toLowerCase();
 
             rows.forEach(row => {{
                 const text = row.textContent.toLowerCase();
                 row.style.display = text.includes(lowerQuery) ? '' : 'none';
             }});
+        }}
+
+        // Toggle details row
+        function toggleDetails(detailsId) {{
+            const detailsRow = document.getElementById(detailsId);
+            if (detailsRow.style.display === 'none') {{
+                detailsRow.style.display = 'table-row';
+            }} else {{
+                detailsRow.style.display = 'none';
+            }}
         }}
     </script>
 </body>

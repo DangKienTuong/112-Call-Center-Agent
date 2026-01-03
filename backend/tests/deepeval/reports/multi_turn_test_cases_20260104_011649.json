@@ -1,0 +1,4372 @@
+[
+  {
+    "id": "MULTI_FIRE_001",
+    "name": "Complete Fire Emergency Flow",
+    "description": "Standard fire emergency from report to ticket creation",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Cháy nhà! Nhà tôi đang cháy lớn lắm!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE emergency",
+          "Should provide fire safety guidance",
+          "Should ask for location"
+        ]
+      },
+      {
+        "user_message": "41 Hai Bà Trưng, Phường 8, Quận 2, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "41 Hai Bà Trưng",
+            "ward": "Phường 8"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract complete address",
+          "Should ask for phone number"
+        ]
+      },
+      {
+        "user_message": "0523005150",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0523005150"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone number",
+          "Should ask for number of affected people"
+        ]
+      },
+      {
+        "user_message": "3 người trong nhà",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract 3 people",
+          "Should show confirmation summary"
+        ]
+      },
+      {
+        "user_message": "Đúng rồi, xác nhận",
+        "expected_bot_actions": [
+          "create_ticket",
+          "provide_final_guidance"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create emergency ticket",
+          "Should show ticket ID",
+          "Should confirm dispatch"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "FIRE_RESCUE"
+      ],
+      "location": {
+        "full": "41 Hai Bà Trưng, Phường 8, Quận 2, TP.HCM",
+        "address": "41 Hai Bà Trưng",
+        "ward": "Phường 8",
+        "district": "Quận 2",
+        "city": "Thành phố Hồ Chí Minh"
+      },
+      "phone": "0523005150",
+      "affectedPeople": {
+        "total": 3
+      },
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "emergency_type": "FIRE_RESCUE",
+      "complexity": "standard"
+    }
+  },
+  {
+    "id": "MULTI_FIRE_002",
+    "name": "Fire with Trapped People",
+    "description": "Fire emergency with people trapped inside",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Cháy lớn! Có người mắc kẹt trong nhà không ra được!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "detect_multiple_types",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE",
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE and MEDICAL",
+          "Should provide urgent guidance",
+          "Should ask for location immediately"
+        ]
+      },
+      {
+        "user_message": "430 Nguyễn Huệ, Phường 12, Quận 11",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "430 Nguyễn Huệ"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location",
+          "Should ask for phone"
+        ]
+      },
+      {
+        "user_message": "Số tôi là 0897155669",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0897155669"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone",
+          "Should ask about trapped people"
+        ]
+      },
+      {
+        "user_message": "5 người, 2 người mắc kẹt tầng 3",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 5
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract 5 people",
+          "Should show confirmation"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create urgent ticket",
+          "Should dispatch fire and rescue"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "FIRE_RESCUE",
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "priority": "CRITICAL"
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "emergency_type": "FIRE_RESCUE",
+      "complexity": "urgent",
+      "trapped_people": true
+    }
+  },
+  {
+    "id": "MULTI_FIRE_003",
+    "name": "Fire with Partial Location",
+    "description": "Fire emergency where location needs clarification",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có cháy ở đây!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "ask_details"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect fire",
+          "Should ask for location"
+        ]
+      },
+      {
+        "user_message": "Gần chợ Bến Thành",
+        "expected_bot_actions": [
+          "extract_partial_location",
+          "ask_clarification"
+        ],
+        "expected_extractions": {
+          "location": {
+            "landmarks": "Gần chợ Bến Thành"
+          }
+        },
+        "expected_next_step": "location_clarification",
+        "validation_criteria": [
+          "Should extract landmark",
+          "Should ask for specific address"
+        ]
+      },
+      {
+        "user_message": "197 Nguyễn Trãi, Phường 10, Quận Tân Bình, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "197 Nguyễn Trãi"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract full address",
+          "Should ask for phone"
+        ]
+      },
+      {
+        "user_message": "0786227881",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0786227881"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "OK",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "requires_clarification": true
+    }
+  },
+  {
+    "id": "MULTI_FIRE_004",
+    "name": "Fire Emergency Variation 1",
+    "description": "Cháy nhà bếp, lửa lan nhanh!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Cháy nhà bếp, lửa lan nhanh!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "16 Hai Bà Trưng, Phường 14, Quận 7, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "16 Hai Bà Trưng, Phường 14, Quận 7, TP.HCM",
+            "address": "16 Hai Bà Trưng",
+            "ward": "Phường 14",
+            "district": "Quận 7",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0521549295",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0521549295"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 1
+    }
+  },
+  {
+    "id": "MULTI_FIRE_005",
+    "name": "Fire Emergency Variation 2",
+    "description": "Chập điện gây cháy phòng ngủ!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Chập điện gây cháy phòng ngủ!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "240 Lý Tự Trọng, Phường 12, Quận 2, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "240 Lý Tự Trọng, Phường 12, Quận 2, TP.HCM",
+            "address": "240 Lý Tự Trọng",
+            "ward": "Phường 12",
+            "district": "Quận 2",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0561984872",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0561984872"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "4 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 4
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 2
+    }
+  },
+  {
+    "id": "MULTI_FIRE_006",
+    "name": "Fire Emergency Variation 3",
+    "description": "Bình gas phát nổ, cháy lớn!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Bình gas phát nổ, cháy lớn!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "448 Hai Bà Trưng, Phường 4, Quận 4, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "448 Hai Bà Trưng, Phường 4, Quận 4, TP.HCM",
+            "address": "448 Hai Bà Trưng",
+            "ward": "Phường 4",
+            "district": "Quận 4",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0343831125",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0343831125"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 3
+    }
+  },
+  {
+    "id": "MULTI_FIRE_007",
+    "name": "Fire Emergency Variation 4",
+    "description": "Cháy kho hàng, khói đen nhiều!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Cháy kho hàng, khói đen nhiều!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "90 Cách Mạng Tháng 8, Phường 9, Thành phố Thủ Đức, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "90 Cách Mạng Tháng 8, Phường 9, Thành phố Thủ Đức, TP.HCM",
+            "address": "90 Cách Mạng Tháng 8",
+            "ward": "Phường 9",
+            "district": "Thành phố Thủ Đức",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0896891795",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0896891795"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 4
+    }
+  },
+  {
+    "id": "MULTI_FIRE_008",
+    "name": "Fire Emergency Variation 5",
+    "description": "Xe ô tô bốc cháy trong garage!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Xe ô tô bốc cháy trong garage!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "299 Điện Biên Phủ, Phường 14, Huyện Nhà Bè, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "299 Điện Biên Phủ, Phường 14, Huyện Nhà Bè, TP.HCM",
+            "address": "299 Điện Biên Phủ",
+            "ward": "Phường 14",
+            "district": "Huyện Nhà Bè",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0812747949",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0812747949"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 5
+    }
+  },
+  {
+    "id": "MULTI_FIRE_009",
+    "name": "Fire Emergency Variation 6",
+    "description": "Cháy tầng hầm chung cư!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Cháy tầng hầm chung cư!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "273 Lê Lợi, Phường 14, Quận Bình Thạnh, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "273 Lê Lợi, Phường 14, Quận Bình Thạnh, TP.HCM",
+            "address": "273 Lê Lợi",
+            "ward": "Phường 14",
+            "district": "Quận Bình Thạnh",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0883444961",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0883444961"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "7 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 7
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 6
+    }
+  },
+  {
+    "id": "MULTI_FIRE_010",
+    "name": "Fire Emergency Variation 7",
+    "description": "Cháy do đốt vàng mã!",
+    "category": "fire_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Cháy do đốt vàng mã!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect FIRE_RESCUE"
+        ]
+      },
+      {
+        "user_message": "121 Hai Bà Trưng, Phường 7, Quận Tân Phú, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "121 Hai Bà Trưng, Phường 7, Quận Tân Phú, TP.HCM",
+            "address": "121 Hai Bà Trưng",
+            "ward": "Phường 7",
+            "district": "Quận Tân Phú",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0388670884",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0388670884"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "5 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 5
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "variation": 7
+    }
+  },
+  {
+    "id": "MULTI_MED_001",
+    "name": "Medical Emergency: Có người bị tai nạn giao thông...",
+    "description": "Có người bị tai nạn giao thông! Người ta nằm trên đường, chảy máu nhiều!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có người bị tai nạn giao thông! Người ta nằm trên đường, chảy máu nhiều!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: chảy máu, cầm máu"
+        ]
+      },
+      {
+        "user_message": "297 Điện Biên Phủ, Phường 7, Quận Tân Phú, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "297 Điện Biên Phủ, Phường 7, Quận Tân Phú, TP.HCM",
+            "address": "297 Điện Biên Phủ",
+            "ward": "Phường 7",
+            "district": "Quận Tân Phú",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0789041572",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0789041572"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người bị thương, 1 người nguy kịch",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2,
+            "injured": 2,
+            "critical": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 1,
+      "first_aid_keywords": [
+        "chảy máu",
+        "cầm máu",
+        "băng ép"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_002",
+    "name": "Medical Emergency: Bà ngoại tôi bị đột quỵ! Một b...",
+    "description": "Bà ngoại tôi bị đột quỵ! Một bên mặt méo, nói không rõ!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Bà ngoại tôi bị đột quỵ! Một bên mặt méo, nói không rõ!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: đột quỵ, nằm nghiêng"
+        ]
+      },
+      {
+        "user_message": "423 Trần Hưng Đạo, Phường 14, Quận 5, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "423 Trần Hưng Đạo, Phường 14, Quận 5, TP.HCM",
+            "address": "423 Trần Hưng Đạo",
+            "ward": "Phường 14",
+            "district": "Quận 5",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0943201269",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0943201269"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1,
+            "critical": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 2,
+      "first_aid_keywords": [
+        "đột quỵ",
+        "nằm nghiêng",
+        "thông đường thở"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_003",
+    "name": "Medical Emergency: Có người đang lên cơn đau tim!...",
+    "description": "Có người đang lên cơn đau tim! Đau ngực, khó thở!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có người đang lên cơn đau tim! Đau ngực, khó thở!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: đau tim, nghỉ ngơi"
+        ]
+      },
+      {
+        "user_message": "10 Võ Văn Tần, Phường 2, Quận 10, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "10 Võ Văn Tần, Phường 2, Quận 10, TP.HCM",
+            "address": "10 Võ Văn Tần",
+            "ward": "Phường 2",
+            "district": "Quận 10",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0919075209",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0919075209"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 3,
+      "first_aid_keywords": [
+        "đau tim",
+        "nghỉ ngơi",
+        "nới lỏng quần áo"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_004",
+    "name": "Medical Emergency: Trẻ con bị sặc đồ ăn! Mặt tím ...",
+    "description": "Trẻ con bị sặc đồ ăn! Mặt tím tái, không thở được!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Trẻ con bị sặc đồ ăn! Mặt tím tái, không thở được!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: sặc, Heimlich"
+        ]
+      },
+      {
+        "user_message": "332 Hai Bà Trưng, Phường 3, Quận 4, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "332 Hai Bà Trưng, Phường 3, Quận 4, TP.HCM",
+            "address": "332 Hai Bà Trưng",
+            "ward": "Phường 3",
+            "district": "Quận 4",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0585428425",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0585428425"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 bé",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1,
+            "critical": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 4,
+      "first_aid_keywords": [
+        "sặc",
+        "Heimlich",
+        "vỗ lưng"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_005",
+    "name": "Medical Emergency: Có người ngã từ tầng 2 xuống! ...",
+    "description": "Có người ngã từ tầng 2 xuống! Nằm bất động!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có người ngã từ tầng 2 xuống! Nằm bất động!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: chấn thương, không di chuyển"
+        ]
+      },
+      {
+        "user_message": "353 Nguyễn Huệ, Phường 14, Quận Phú Nhuận, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "353 Nguyễn Huệ, Phường 14, Quận Phú Nhuận, TP.HCM",
+            "address": "353 Nguyễn Huệ",
+            "ward": "Phường 14",
+            "district": "Quận Phú Nhuận",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0896373664",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0896373664"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1,
+            "critical": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 5,
+      "first_aid_keywords": [
+        "chấn thương",
+        "không di chuyển",
+        "cố định"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_006",
+    "name": "Medical Emergency: Người bị điện giật! Đang bất t...",
+    "description": "Người bị điện giật! Đang bất tỉnh!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Người bị điện giật! Đang bất tỉnh!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL",
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL', 'FIRE_RESCUE']",
+          "Should mention: điện giật, ngắt nguồn điện"
+        ]
+      },
+      {
+        "user_message": "83 Cách Mạng Tháng 8, Phường 4, Huyện Bình Chánh, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "83 Cách Mạng Tháng 8, Phường 4, Huyện Bình Chánh, TP.HCM",
+            "address": "83 Cách Mạng Tháng 8",
+            "ward": "Phường 4",
+            "district": "Huyện Bình Chánh",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0591894786",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0591894786"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1,
+            "critical": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL",
+        "FIRE_RESCUE"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 6,
+      "first_aid_keywords": [
+        "điện giật",
+        "ngắt nguồn điện",
+        "CPR"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_007",
+    "name": "Medical Emergency: Có người bị rắn cắn! Chân sưng...",
+    "description": "Có người bị rắn cắn! Chân sưng to, đau nhiều!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có người bị rắn cắn! Chân sưng to, đau nhiều!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: rắn cắn, giữ yên"
+        ]
+      },
+      {
+        "user_message": "141 Lê Lợi, Phường 1, Quận Thủ Đức, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "141 Lê Lợi, Phường 1, Quận Thủ Đức, TP.HCM",
+            "address": "141 Lê Lợi",
+            "ward": "Phường 1",
+            "district": "Quận Thủ Đức",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0942092118",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0942092118"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 7,
+      "first_aid_keywords": [
+        "rắn cắn",
+        "giữ yên",
+        "không hút nọc"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_008",
+    "name": "Medical Emergency: Tai nạn xe khách! Nhiều người ...",
+    "description": "Tai nạn xe khách! Nhiều người bị thương!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Tai nạn xe khách! Nhiều người bị thương!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: tai nạn, sơ cứu"
+        ]
+      },
+      {
+        "user_message": "294 Võ Văn Tần, Phường 5, Quận 2, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "294 Võ Văn Tần, Phường 5, Quận 2, TP.HCM",
+            "address": "294 Võ Văn Tần",
+            "ward": "Phường 5",
+            "district": "Quận 2",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0701707153",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0701707153"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "Khoảng 10 người, 3 người nặng",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 10,
+            "injured": 7,
+            "critical": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 8,
+      "first_aid_keywords": [
+        "tai nạn",
+        "sơ cứu",
+        "cầm máu"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_009",
+    "name": "Medical Emergency: Có người bị ngộ độc thực phẩm!...",
+    "description": "Có người bị ngộ độc thực phẩm! Nôn mửa, co giật!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có người bị ngộ độc thực phẩm! Nôn mửa, co giật!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL']",
+          "Should mention: ngộ độc, không gây nôn"
+        ]
+      },
+      {
+        "user_message": "302 Điện Biên Phủ, Phường 14, Huyện Củ Chi, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "302 Điện Biên Phủ, Phường 14, Huyện Củ Chi, TP.HCM",
+            "address": "302 Điện Biên Phủ",
+            "ward": "Phường 14",
+            "district": "Huyện Củ Chi",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0914244210",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0914244210"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "4 người cùng bàn",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 4
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 9,
+      "first_aid_keywords": [
+        "ngộ độc",
+        "không gây nôn",
+        "giữ mẫu"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_MED_010",
+    "name": "Medical Emergency: Người bị đuối nước! Vừa vớt lê...",
+    "description": "Người bị đuối nước! Vừa vớt lên, không thở!",
+    "category": "medical_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Người bị đuối nước! Vừa vớt lên, không thở!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_first_aid"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL",
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect ['MEDICAL', 'FIRE_RESCUE']",
+          "Should mention: đuối nước, CPR"
+        ]
+      },
+      {
+        "user_message": "327 Nguyễn Huệ, Phường 8, Quận 2, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "327 Nguyễn Huệ, Phường 8, Quận 2, TP.HCM",
+            "address": "327 Nguyễn Huệ",
+            "ward": "Phường 8",
+            "district": "Quận 2",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0908409999",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0908409999"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1,
+            "critical": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract affected people correctly"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch ambulance"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL",
+        "FIRE_RESCUE"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "ambulance": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "scenario": 10,
+      "first_aid_keywords": [
+        "đuối nước",
+        "CPR",
+        "hô hấp nhân tạo"
+      ]
+    }
+  },
+  {
+    "id": "MULTI_SEC_001",
+    "name": "Security Emergency: Có kẻ trộm đang đột nhập vào n...",
+    "description": "Có kẻ trộm đang đột nhập vào nhà tôi! Tôi đang trốn trong phòng!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có kẻ trộm đang đột nhập vào nhà tôi! Tôi đang trốn trong phòng!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "38 Lê Lợi, Phường 11, Quận 10, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "38 Lê Lợi, Phường 11, Quận 10, TP.HCM",
+            "address": "38 Lê Lợi",
+            "ward": "Phường 11",
+            "district": "Quận 10",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0857849034",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0857849034"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "HIGH"
+    }
+  },
+  {
+    "id": "MULTI_SEC_002",
+    "name": "Security Emergency: Đang bị cướp! Có dao! Cứu tôi ...",
+    "description": "Đang bị cướp! Có dao! Cứu tôi với!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Đang bị cướp! Có dao! Cứu tôi với!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "265 Lê Lợi, Phường 14, Quận Tân Phú, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "265 Lê Lợi, Phường 14, Quận Tân Phú, TP.HCM",
+            "address": "265 Lê Lợi",
+            "ward": "Phường 14",
+            "district": "Quận Tân Phú",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0597668702",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0597668702"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "CRITICAL"
+    }
+  },
+  {
+    "id": "MULTI_SEC_003",
+    "name": "Security Emergency: Có nhóm người đánh nhau ngoài ...",
+    "description": "Có nhóm người đánh nhau ngoài đường, đâm chém nhau!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có nhóm người đánh nhau ngoài đường, đâm chém nhau!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY",
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY', 'MEDICAL']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "463 Điện Biên Phủ, Phường 4, Quận Tân Phú, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "463 Điện Biên Phủ, Phường 4, Quận Tân Phú, TP.HCM",
+            "address": "463 Điện Biên Phủ",
+            "ward": "Phường 4",
+            "district": "Quận Tân Phú",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0355041623",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0355041623"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY",
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "CRITICAL"
+    }
+  },
+  {
+    "id": "MULTI_SEC_004",
+    "name": "Security Emergency: Có người say rượu đang đập phá...",
+    "description": "Có người say rượu đang đập phá quán, đe dọa mọi người!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có người say rượu đang đập phá quán, đe dọa mọi người!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "68 Trần Hưng Đạo, Phường 6, Quận Thủ Đức, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "68 Trần Hưng Đạo, Phường 6, Quận Thủ Đức, TP.HCM",
+            "address": "68 Trần Hưng Đạo",
+            "ward": "Phường 6",
+            "district": "Quận Thủ Đức",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0366546605",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0366546605"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "HIGH"
+    }
+  },
+  {
+    "id": "MULTI_SEC_005",
+    "name": "Security Emergency: Tôi phát hiện có người đang rì...",
+    "description": "Tôi phát hiện có người đang rình rập trước nhà, rất đáng ngờ!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Tôi phát hiện có người đang rình rập trước nhà, rất đáng ngờ!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "72 Cách Mạng Tháng 8, Phường 6, Huyện Bình Chánh, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "72 Cách Mạng Tháng 8, Phường 6, Huyện Bình Chánh, TP.HCM",
+            "address": "72 Cách Mạng Tháng 8",
+            "ward": "Phường 6",
+            "district": "Huyện Bình Chánh",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0987947061",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0987947061"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "MEDIUM"
+    }
+  },
+  {
+    "id": "MULTI_SEC_006",
+    "name": "Security Emergency: Bạo lực gia đình! Chồng đang đ...",
+    "description": "Bạo lực gia đình! Chồng đang đánh vợ, nghe tiếng la hét!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Bạo lực gia đình! Chồng đang đánh vợ, nghe tiếng la hét!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY",
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY', 'MEDICAL']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "498 Lý Tự Trọng, Phường 2, Quận 5, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "498 Lý Tự Trọng, Phường 2, Quận 5, TP.HCM",
+            "address": "498 Lý Tự Trọng",
+            "ward": "Phường 2",
+            "district": "Quận 5",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0916689763",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0916689763"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY",
+        "MEDICAL"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "CRITICAL"
+    }
+  },
+  {
+    "id": "MULTI_SEC_007",
+    "name": "Security Emergency: Có vụ cướp ngân hàng đang xảy ...",
+    "description": "Có vụ cướp ngân hàng đang xảy ra!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Có vụ cướp ngân hàng đang xảy ra!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "7 Lý Tự Trọng, Phường 10, Quận 2, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "7 Lý Tự Trọng, Phường 10, Quận 2, TP.HCM",
+            "address": "7 Lý Tự Trọng",
+            "ward": "Phường 10",
+            "district": "Quận 2",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0348961223",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0348961223"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "CRITICAL"
+    }
+  },
+  {
+    "id": "MULTI_SEC_008",
+    "name": "Security Emergency: Nhóm thanh niên đua xe, gây rố...",
+    "description": "Nhóm thanh niên đua xe, gây rối trật tự!",
+    "category": "security_emergency_flow",
+    "turns": [
+      {
+        "user_message": "Nhóm thanh niên đua xe, gây rối trật tự!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_safety_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect ['SECURITY']",
+          "Should provide safety advice"
+        ]
+      },
+      {
+        "user_message": "316 Lý Tự Trọng, Phường 10, Quận Phú Nhuận, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "316 Lý Tự Trọng, Phường 10, Quận Phú Nhuận, TP.HCM",
+            "address": "316 Lý Tự Trọng",
+            "ward": "Phường 10",
+            "district": "Quận Phú Nhuận",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0857258507",
+        "expected_bot_actions": [
+          "validate_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "phone": "0857258507"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Đúng, nhanh lên!",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Should dispatch police"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "SECURITY"
+      ],
+      "ticketCreated": true,
+      "supportRequired": {
+        "police": true
+      }
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "urgency": "HIGH"
+    }
+  },
+  {
+    "id": "MULTI_CORR_001",
+    "name": "User Corrects Address",
+    "description": "User provides wrong address then corrects it",
+    "category": "user_correction_flow",
+    "turns": [
+      {
+        "user_message": "Có cháy nhà!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect fire"
+        ]
+      },
+      {
+        "user_message": "129 Điện Biên Phủ, Phường 4, Thành phố Thủ Đức, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "129 Điện Biên Phủ, Phường 4, Thành phố Thủ Đức, TP.HCM",
+            "address": "129 Điện Biên Phủ",
+            "ward": "Phường 4",
+            "district": "Thành phố Thủ Đức",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract first address"
+        ]
+      },
+      {
+        "user_message": "0593394096",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0593394096"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation"
+        ]
+      },
+      {
+        "user_message": "Không, sai địa chỉ rồi. Địa chỉ đúng là 176 Nguyễn Trãi, Phường 1, Quận 11, TP.HCM",
+        "expected_bot_actions": [
+          "detect_correction",
+          "update_location",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "176 Nguyễn Trãi, Phường 1, Quận 11, TP.HCM",
+            "address": "176 Nguyễn Trãi",
+            "ward": "Phường 1",
+            "district": "Quận 11",
+            "city": "Thành phố Hồ Chí Minh"
+          },
+          "isCorrection": true
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should detect correction",
+          "Should update address",
+          "Should show new confirmation"
+        ]
+      },
+      {
+        "user_message": "Đúng rồi, xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket with corrected address"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "location": {
+        "full": "176 Nguyễn Trãi, Phường 1, Quận 11, TP.HCM",
+        "address": "176 Nguyễn Trãi",
+        "ward": "Phường 1",
+        "district": "Quận 11",
+        "city": "Thành phố Hồ Chí Minh"
+      },
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "correction_type": "address"
+    }
+  },
+  {
+    "id": "MULTI_CORR_002",
+    "name": "User Corrects Phone",
+    "description": "User provides wrong phone then corrects it",
+    "category": "user_correction_flow",
+    "turns": [
+      {
+        "user_message": "Tai nạn giao thông!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect medical"
+        ]
+      },
+      {
+        "user_message": "459 Lý Tự Trọng, Phường 3, Quận Gò Vấp, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "459 Lý Tự Trọng, Phường 3, Quận Gò Vấp, TP.HCM",
+            "address": "459 Lý Tự Trọng",
+            "ward": "Phường 3",
+            "district": "Quận Gò Vấp",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0852841658",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0852841658"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate first phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation"
+        ]
+      },
+      {
+        "user_message": "Xin lỗi, số điện thoại đúng là 0545172179",
+        "expected_bot_actions": [
+          "detect_correction",
+          "update_phone",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "phone": "0545172179",
+          "isCorrection": true
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should update phone",
+          "Should show new confirmation"
+        ]
+      },
+      {
+        "user_message": "OK",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket with corrected phone"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0545172179",
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "correction_type": "phone"
+    }
+  },
+  {
+    "id": "MULTI_CORR_003",
+    "name": "User Corrects People Count",
+    "description": "User corrects number of affected people",
+    "category": "user_correction_flow",
+    "turns": [
+      {
+        "user_message": "Có cháy ở nhà hàng xóm!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect fire"
+        ]
+      },
+      {
+        "user_message": "201 Cách Mạng Tháng 8, Phường 4, Huyện Củ Chi, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "201 Cách Mạng Tháng 8, Phường 4, Huyện Củ Chi, TP.HCM",
+            "address": "201 Cách Mạng Tháng 8",
+            "ward": "Phường 4",
+            "district": "Huyện Củ Chi",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0552433954",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0552433954"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation with 2 people"
+        ]
+      },
+      {
+        "user_message": "Không, thực ra có 5 người, tôi đếm nhầm",
+        "expected_bot_actions": [
+          "detect_correction",
+          "update_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 5
+          },
+          "isCorrection": true
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should update to 5 people",
+          "Should show new confirmation"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket with 5 people"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "affectedPeople": {
+        "total": 5
+      },
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "correction_type": "people_count"
+    }
+  },
+  {
+    "id": "MULTI_CORR_004",
+    "name": "Multiple Corrections",
+    "description": "User makes multiple corrections during confirmation",
+    "category": "user_correction_flow",
+    "turns": [
+      {
+        "user_message": "Có vụ đánh nhau!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "location",
+        "validation_criteria": [
+          "Should detect security"
+        ]
+      },
+      {
+        "user_message": "138 Hai Bà Trưng, Phường 10, Quận Tân Phú, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "138 Hai Bà Trưng, Phường 10, Quận Tân Phú, TP.HCM",
+            "address": "138 Hai Bà Trưng",
+            "ward": "Phường 10",
+            "district": "Quận Tân Phú",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0354483047",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0354483047"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation"
+        ]
+      },
+      {
+        "user_message": "Sai hết rồi! Địa chỉ là 352 Nguyễn Huệ, SĐT là 0847426048",
+        "expected_bot_actions": [
+          "detect_correction",
+          "update_multiple_fields"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "352 Nguyễn Huệ"
+          },
+          "phone": "0847426048"
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should update both fields"
+        ]
+      },
+      {
+        "user_message": "Đúng rồi",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket with corrected info"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "correction_type": "multiple"
+    }
+  },
+  {
+    "id": "MULTI_AUTH_001",
+    "name": "Authenticated User Flow 1",
+    "description": "Authenticated user with saved phone: Cháy nhà tôi!",
+    "category": "authenticated_user_flow",
+    "turns": [
+      {
+        "user_message": "Cháy nhà tôi!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect emergency type"
+        ]
+      },
+      {
+        "user_message": "192 Cách Mạng Tháng 8, Phường 2, Quận 9, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "skip_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "192 Cách Mạng Tháng 8, Phường 2, Quận 9, TP.HCM",
+            "address": "192 Cách Mạng Tháng 8",
+            "ward": "Phường 2",
+            "district": "Quận 9",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should extract location",
+          "Should NOT ask for phone (user has saved phone)",
+          "Should ask for people count directly"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation",
+          "Confirmation should show saved phone number"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Ticket should use saved phone"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0887874622",
+      "ticketCreated": true,
+      "skippedPhoneCollection": true
+    },
+    "is_authenticated": true,
+    "user_memory": {
+      "savedPhone": "0887874622",
+      "savedName": "Người dùng 1"
+    },
+    "should_create_ticket": true,
+    "metadata": {
+      "saved_phone": "0887874622"
+    }
+  },
+  {
+    "id": "MULTI_AUTH_002",
+    "name": "Authenticated User Flow 2",
+    "description": "Authenticated user with saved phone: Có tai nạn giao thông!",
+    "category": "authenticated_user_flow",
+    "turns": [
+      {
+        "user_message": "Có tai nạn giao thông!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect emergency type"
+        ]
+      },
+      {
+        "user_message": "315 Hai Bà Trưng, Phường 3, Huyện Hóc Môn, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "skip_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "315 Hai Bà Trưng, Phường 3, Huyện Hóc Môn, TP.HCM",
+            "address": "315 Hai Bà Trưng",
+            "ward": "Phường 3",
+            "district": "Huyện Hóc Môn",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should extract location",
+          "Should NOT ask for phone (user has saved phone)",
+          "Should ask for people count directly"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation",
+          "Confirmation should show saved phone number"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Ticket should use saved phone"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0791210393",
+      "ticketCreated": true,
+      "skippedPhoneCollection": true
+    },
+    "is_authenticated": true,
+    "user_memory": {
+      "savedPhone": "0791210393",
+      "savedName": "Người dùng 2"
+    },
+    "should_create_ticket": true,
+    "metadata": {
+      "saved_phone": "0791210393"
+    }
+  },
+  {
+    "id": "MULTI_AUTH_003",
+    "name": "Authenticated User Flow 3",
+    "description": "Authenticated user with saved phone: Có kẻ trộm!",
+    "category": "authenticated_user_flow",
+    "turns": [
+      {
+        "user_message": "Có kẻ trộm!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect emergency type"
+        ]
+      },
+      {
+        "user_message": "408 Cách Mạng Tháng 8, Phường 10, Quận 4, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "skip_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "408 Cách Mạng Tháng 8, Phường 10, Quận 4, TP.HCM",
+            "address": "408 Cách Mạng Tháng 8",
+            "ward": "Phường 10",
+            "district": "Quận 4",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should extract location",
+          "Should NOT ask for phone (user has saved phone)",
+          "Should ask for people count directly"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation",
+          "Confirmation should show saved phone number"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Ticket should use saved phone"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0767206075",
+      "ticketCreated": true,
+      "skippedPhoneCollection": true
+    },
+    "is_authenticated": true,
+    "user_memory": {
+      "savedPhone": "0767206075",
+      "savedName": "Người dùng 3"
+    },
+    "should_create_ticket": true,
+    "metadata": {
+      "saved_phone": "0767206075"
+    }
+  },
+  {
+    "id": "MULTI_AUTH_004",
+    "name": "Authenticated User Flow 4",
+    "description": "Authenticated user with saved phone: Người nhà bị đột quỵ!",
+    "category": "authenticated_user_flow",
+    "turns": [
+      {
+        "user_message": "Người nhà bị đột quỵ!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect emergency type"
+        ]
+      },
+      {
+        "user_message": "321 Cách Mạng Tháng 8, Phường 10, Quận 11, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "skip_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "321 Cách Mạng Tháng 8, Phường 10, Quận 11, TP.HCM",
+            "address": "321 Cách Mạng Tháng 8",
+            "ward": "Phường 10",
+            "district": "Quận 11",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should extract location",
+          "Should NOT ask for phone (user has saved phone)",
+          "Should ask for people count directly"
+        ]
+      },
+      {
+        "user_message": "3 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation",
+          "Confirmation should show saved phone number"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Ticket should use saved phone"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0326137982",
+      "ticketCreated": true,
+      "skippedPhoneCollection": true
+    },
+    "is_authenticated": true,
+    "user_memory": {
+      "savedPhone": "0326137982",
+      "savedName": "Người dùng 4"
+    },
+    "should_create_ticket": true,
+    "metadata": {
+      "saved_phone": "0326137982"
+    }
+  },
+  {
+    "id": "MULTI_AUTH_005",
+    "name": "Authenticated User Flow 5",
+    "description": "Authenticated user with saved phone: Có vụ đánh nhau!",
+    "category": "authenticated_user_flow",
+    "turns": [
+      {
+        "user_message": "Có vụ đánh nhau!",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "provide_guidance"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "SECURITY",
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect emergency type"
+        ]
+      },
+      {
+        "user_message": "141 Hai Bà Trưng, Phường 12, Thành phố Thủ Đức, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location",
+          "skip_phone",
+          "ask_people"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "141 Hai Bà Trưng, Phường 12, Thành phố Thủ Đức, TP.HCM",
+            "address": "141 Hai Bà Trưng",
+            "ward": "Phường 12",
+            "district": "Thành phố Thủ Đức",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should extract location",
+          "Should NOT ask for phone (user has saved phone)",
+          "Should ask for people count directly"
+        ]
+      },
+      {
+        "user_message": "1 người",
+        "expected_bot_actions": [
+          "extract_people_count",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation",
+          "Confirmation should show saved phone number"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket",
+          "Ticket should use saved phone"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0708010939",
+      "ticketCreated": true,
+      "skippedPhoneCollection": true
+    },
+    "is_authenticated": true,
+    "user_memory": {
+      "savedPhone": "0708010939",
+      "savedName": "Người dùng 5"
+    },
+    "should_create_ticket": true,
+    "metadata": {
+      "saved_phone": "0708010939"
+    }
+  },
+  {
+    "id": "MULTI_EDGE_001",
+    "name": "All Info in First Message",
+    "description": "User provides all required information upfront",
+    "category": "edge_case_flow",
+    "turns": [
+      {
+        "user_message": "Có cháy nhà ở 435 Nguyễn Trãi, Phường 13, Quận 10, TP.HCM! Số tôi là 0792170183, có 3 người trong nhà!",
+        "expected_bot_actions": [
+          "extract_all_info",
+          "show_confirmation"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ],
+          "location": {
+            "full": "435 Nguyễn Trãi, Phường 13, Quận 10, TP.HCM",
+            "address": "435 Nguyễn Trãi",
+            "ward": "Phường 13",
+            "district": "Quận 10",
+            "city": "Thành phố Hồ Chí Minh"
+          },
+          "phone": "0792170183",
+          "affectedPeople": {
+            "total": 3
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract all info from single message",
+          "Should go directly to confirmation"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket immediately"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "single_message_info": true
+    }
+  },
+  {
+    "id": "MULTI_EDGE_002",
+    "name": "Minimal User Responses",
+    "description": "User gives very brief responses",
+    "category": "edge_case_flow",
+    "turns": [
+      {
+        "user_message": "Cháy",
+        "expected_bot_actions": [
+          "detect_emergency_type",
+          "ask_details"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should understand minimal input"
+        ]
+      },
+      {
+        "user_message": "186 Nguyễn Trãi",
+        "expected_bot_actions": [
+          "extract_partial_location",
+          "ask_more"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "186 Nguyễn Trãi"
+          }
+        },
+        "expected_next_step": "location_clarification",
+        "validation_criteria": [
+          "Should ask for more location details"
+        ]
+      },
+      {
+        "user_message": "Phường 3, Quận 9",
+        "expected_bot_actions": [
+          "complete_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "ward": "Phường 3"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should complete location"
+        ]
+      },
+      {
+        "user_message": "0385395893",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0385395893"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "1",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 1
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should understand '1' as people count"
+        ]
+      },
+      {
+        "user_message": "ok",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should understand 'ok' as confirmation"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "minimal_responses": true
+    }
+  },
+  {
+    "id": "MULTI_EDGE_003",
+    "name": "Invalid Phone Then Valid",
+    "description": "User provides invalid phone, then valid phone",
+    "category": "edge_case_flow",
+    "turns": [
+      {
+        "user_message": "Có tai nạn!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect medical"
+        ]
+      },
+      {
+        "user_message": "304 Cách Mạng Tháng 8, Phường 13, Quận 5, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "304 Cách Mạng Tháng 8, Phường 13, Quận 5, TP.HCM",
+            "address": "304 Cách Mạng Tháng 8",
+            "ward": "Phường 13",
+            "district": "Quận 5",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0123456789",
+        "expected_bot_actions": [
+          "reject_phone",
+          "ask_again"
+        ],
+        "expected_extractions": {
+          "phoneValid": false
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should reject invalid phone",
+          "Should explain why invalid",
+          "Should ask for valid phone"
+        ]
+      },
+      {
+        "user_message": "0524774481",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0524774481",
+          "phoneValid": true
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should accept valid phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should extract count"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "phone": "0524774481",
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "phone_validation_retry": true
+    }
+  },
+  {
+    "id": "MULTI_EDGE_004",
+    "name": "Change Emergency Type",
+    "description": "User initially reports wrong type then corrects",
+    "category": "edge_case_flow",
+    "turns": [
+      {
+        "user_message": "Có cháy!",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "FIRE_RESCUE"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect fire"
+        ]
+      },
+      {
+        "user_message": "267 Cách Mạng Tháng 8, Phường 4, Quận Gò Vấp, TP.HCM",
+        "expected_bot_actions": [
+          "extract_location"
+        ],
+        "expected_extractions": {
+          "location": {
+            "full": "267 Cách Mạng Tháng 8, Phường 4, Quận Gò Vấp, TP.HCM",
+            "address": "267 Cách Mạng Tháng 8",
+            "ward": "Phường 4",
+            "district": "Quận Gò Vấp",
+            "city": "Thành phố Hồ Chí Minh"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should extract location"
+        ]
+      },
+      {
+        "user_message": "0902274826",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0902274826"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "2 người",
+        "expected_bot_actions": [
+          "extract_people_count"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 2
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should show confirmation"
+        ]
+      },
+      {
+        "user_message": "Xin lỗi, không phải cháy. Thực ra là có người bị thương do tai nạn",
+        "expected_bot_actions": [
+          "detect_correction",
+          "update_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ],
+          "isCorrection": true
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should update to MEDICAL",
+          "Should update guidance"
+        ]
+      },
+      {
+        "user_message": "Đúng",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket with MEDICAL type"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "emergencyTypes": [
+        "MEDICAL"
+      ],
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "type_change": true
+    }
+  },
+  {
+    "id": "MULTI_EDGE_005",
+    "name": "Long Conversation with Clarifications",
+    "description": "Extended conversation requiring multiple clarifications",
+    "category": "edge_case_flow",
+    "turns": [
+      {
+        "user_message": "Có vấn đề ở đây",
+        "expected_bot_actions": [
+          "ask_clarification"
+        ],
+        "expected_extractions": {},
+        "expected_next_step": "emergency_clarification",
+        "validation_criteria": [
+          "Should ask what happened"
+        ]
+      },
+      {
+        "user_message": "Có người bị thương",
+        "expected_bot_actions": [
+          "detect_emergency_type"
+        ],
+        "expected_extractions": {
+          "emergencyTypes": [
+            "MEDICAL"
+          ]
+        },
+        "expected_next_step": "first_aid_then_location",
+        "validation_criteria": [
+          "Should detect medical"
+        ]
+      },
+      {
+        "user_message": "Gần đây",
+        "expected_bot_actions": [
+          "ask_specific_location"
+        ],
+        "expected_extractions": {},
+        "expected_next_step": "location_clarification",
+        "validation_criteria": [
+          "Should ask for specific address"
+        ]
+      },
+      {
+        "user_message": "Ở đường Nguyễn Huệ",
+        "expected_bot_actions": [
+          "extract_partial",
+          "ask_more"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "Đường Nguyễn Huệ"
+          }
+        },
+        "expected_next_step": "location_clarification",
+        "validation_criteria": [
+          "Should ask for ward/district"
+        ]
+      },
+      {
+        "user_message": "Quận 1",
+        "expected_bot_actions": [
+          "extract_partial",
+          "ask_more"
+        ],
+        "expected_extractions": {
+          "location": {
+            "district": "Quận 1"
+          }
+        },
+        "expected_next_step": "location_clarification",
+        "validation_criteria": [
+          "Should ask for specific number"
+        ]
+      },
+      {
+        "user_message": "Số 123, Phường Bến Nghé",
+        "expected_bot_actions": [
+          "complete_location",
+          "ask_phone"
+        ],
+        "expected_extractions": {
+          "location": {
+            "address": "Số 123",
+            "ward": "Phường Bến Nghé"
+          }
+        },
+        "expected_next_step": "phone",
+        "validation_criteria": [
+          "Should have complete location"
+        ]
+      },
+      {
+        "user_message": "0912345678",
+        "expected_bot_actions": [
+          "validate_phone"
+        ],
+        "expected_extractions": {
+          "phone": "0912345678"
+        },
+        "expected_next_step": "people",
+        "validation_criteria": [
+          "Should validate phone"
+        ]
+      },
+      {
+        "user_message": "Không biết, nhiều người",
+        "expected_bot_actions": [
+          "estimate_people"
+        ],
+        "expected_extractions": {
+          "affectedPeople": {
+            "total": 5
+          }
+        },
+        "expected_next_step": "confirmation",
+        "validation_criteria": [
+          "Should estimate people count"
+        ]
+      },
+      {
+        "user_message": "Xác nhận",
+        "expected_bot_actions": [
+          "create_ticket"
+        ],
+        "expected_extractions": {
+          "userConfirmed": true
+        },
+        "expected_next_step": "complete",
+        "validation_criteria": [
+          "Should create ticket"
+        ]
+      }
+    ],
+    "expected_final_state": {
+      "ticketCreated": true
+    },
+    "is_authenticated": false,
+    "user_memory": null,
+    "should_create_ticket": true,
+    "metadata": {
+      "multiple_clarifications": true,
+      "turn_count": 9
+    }
+  }
+]
