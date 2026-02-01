@@ -58,10 +58,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/emergency_112', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/emergency_112').then(() => {
   logger.info('Connected to MongoDB');
 }).catch(err => {
   logger.error('MongoDB connection error:', err);
