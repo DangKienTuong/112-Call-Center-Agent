@@ -24,6 +24,7 @@ export function useVoiceChat(language = 'vi') {
   const audioRef = useRef(null);
   const audioQueueRef = useRef([]);
   const isProcessingQueueRef = useRef(false);
+  const abortPlaybackRef = useRef(null); // Abort callback to cancel stuck audio Promise
 
   // State for speaking status (queue processing)
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -115,9 +116,16 @@ export function useVoiceChat(language = 'vi') {
       setIsPlaying(false);
     }
 
+    // Abort any stuck audio Promise from processAudioQueue
+    if (abortPlaybackRef.current) {
+      abortPlaybackRef.current();
+      abortPlaybackRef.current = null;
+    }
+
     // Also reset speaking state if we force start recording
     setIsSpeaking(false);
     audioQueueRef.current = [];
+    isProcessingQueueRef.current = false;
 
     // Request microphone access first
     try {
@@ -169,6 +177,11 @@ export function useVoiceChat(language = 'vi') {
         const audioBlob = await voiceService.textToSpeech(text, lang);
         setIsTTSLoading(false);
 
+        // Check if queue was cleared while we were fetching (user interrupted)
+        if (audioQueueRef.current.length === 0) {
+          break;
+        }
+
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         audioRef.current = audio;
@@ -178,9 +191,18 @@ export function useVoiceChat(language = 'vi') {
         await new Promise((resolve, reject) => {
           audio.onended = () => {
             URL.revokeObjectURL(audioUrl);
+            abortPlaybackRef.current = null;
             resolve();
           };
-          audio.onerror = reject;
+          audio.onerror = () => {
+            abortPlaybackRef.current = null;
+            reject(new Error('Audio playback error'));
+          };
+          // Register abort callback so stopPlayback/startRecording can resolve this Promise
+          abortPlaybackRef.current = () => {
+            URL.revokeObjectURL(audioUrl);
+            resolve();
+          };
           audio.play().catch(reject);
         });
 
@@ -192,7 +214,10 @@ export function useVoiceChat(language = 'vi') {
         setIsTTSLoading(false);
       }
 
-      audioQueueRef.current.shift();
+      // Only shift if queue still has items (may have been cleared by interrupt)
+      if (audioQueueRef.current.length > 0) {
+        audioQueueRef.current.shift();
+      }
     }
 
     isProcessingQueueRef.current = false;
@@ -218,7 +243,13 @@ export function useVoiceChat(language = 'vi') {
       audioRef.current.pause();
       audioRef.current = null;
     }
+    // Abort the stuck audio Promise so processAudioQueue can exit cleanly
+    if (abortPlaybackRef.current) {
+      abortPlaybackRef.current();
+      abortPlaybackRef.current = null;
+    }
     audioQueueRef.current = [];
+    isProcessingQueueRef.current = false;
     setIsPlaying(false);
     setIsSpeaking(false);
     setIsTTSLoading(false);

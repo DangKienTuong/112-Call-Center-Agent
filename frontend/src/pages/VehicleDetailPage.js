@@ -263,3 +263,4 @@ function VehicleDetailPage() {
 }
 
 export default VehicleDetailPage;
+

@@ -135,3 +135,4 @@ vehicleSchema.statics.findAvailableForLocation = async function(location, vehicl
 };
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);
+

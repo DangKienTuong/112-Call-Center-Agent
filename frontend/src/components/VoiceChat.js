@@ -144,9 +144,10 @@ function VoiceChat({
       isManualStop.current = true;
       stopRecording();
     } else {
-      // Stop playback if playing
-      if (isPlaying) {
-        handleStopPlayback();
+      // Stop playback if playing — but keep voice mode active
+      // (user is interrupting to ask a new question, not disabling voice)
+      if (isPlaying || isSpeaking) {
+        stopPlayback();
       }
       isManualStop.current = false;
       lastTranscriptRef.current = '';
@@ -158,12 +159,13 @@ function VoiceChat({
       
       startRecording();
     }
-  }, [isRecording, isPlaying, stopRecording, startRecording, clearTranscript]);
+  }, [isRecording, isPlaying, isSpeaking, stopRecording, startRecording, stopPlayback, clearTranscript]);
 
-  // Handle stop playback manually
+  // Handle stop playback manually (skip current audio, but keep voice mode active)
   const handleStopPlayback = useCallback(() => {
-    isManualStop.current = true;
     stopPlayback();
+    // Don't set isManualStop — user just wants to skip current audio,
+    // not disable the voice conversation flow
   }, [stopPlayback]);
 
   // Toggle voice enabled

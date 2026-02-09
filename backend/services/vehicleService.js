@@ -336,3 +336,4 @@ module.exports = {
   updateVehicleStatus,
   getVehicleStatistics
 };
+

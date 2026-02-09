@@ -10,11 +10,15 @@ class ElevenLabsService {
     this.apiKey = process.env.ELEVENLABS_API_KEY;
     this.baseUrl = 'https://api.elevenlabs.io/v1';
 
-    // Vietnamese voice ID - Native Vietnamese voices from ElevenLabs (Hanoi/Northern accent):
-    // - "XBDAUT8ybuJTTCoOLSUj" - MC Anh Đức (male, Hanoi, Northern accent - podcasts, TV)
-    // - "jpmnSYDOADVEpZksbLmc" - Nhung (female, young, Hanoi - NOTE: Requires Creator Tier)
-    // These are NATIVE Vietnamese speakers with standard Northern accent
-    this.defaultVoiceId = process.env.ELEVENLABS_VOICE_ID || 'XBDAUT8ybuJTTCoOLSUj'; // MC Anh Đức
+    // Vietnamese voice ID options:
+    // Premade voices (available on free tier, multilingual model speaks Vietnamese):
+    // - "onwK4e9ZLuTAKqWW03F9" - Daniel (male, Steady Broadcaster - works well for Vietnamese)
+    // - "nPczCjzI2devNBz1zQrb" - Brian (male, Deep, Resonant and Comforting)
+    // - "cjVigY5qzO86Huf0OWal" - Eric (male, Smooth, Trustworthy)
+    // Professional voices (require paid subscription):
+    // - "XBDAUT8ybuJTTCoOLSUj" - MC Anh Đức (male, Hanoi, Northern accent)
+    // - "foH7s9fX31wFFH2yqrFa" - Huyen (female, Vietnamese)
+    this.defaultVoiceId = process.env.ELEVENLABS_VOICE_ID || 'onwK4e9ZLuTAKqWW03F9'; // Daniel - Steady Broadcaster
 
     // Model settings - eleven_turbo_v2_5 is optimized for Vietnamese and non-English languages
     // Released Dec 2024 specifically for Vietnamese support
@@ -135,6 +139,8 @@ class ElevenLabsService {
 
       if (error.response?.status === 401) {
         throw new Error('Invalid ElevenLabs API key');
+      } else if (error.response?.status === 402) {
+        throw new Error(`ElevenLabs subscription required: ${errorMessage}. Try using a premade voice.`);
       } else if (error.response?.status === 429) {
         throw new Error('ElevenLabs rate limit exceeded');
       } else if (error.response?.status === 400) {
