@@ -1,0 +1,47 @@
+services:
+  # MongoDB
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Backend API
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/emergency_112
+      - CORS_ORIGIN=http://localhost
+      - NODE_ENV=production
+    volumes:
+      - ./reference_document:/reference_document:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # Frontend (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_URL: /api
+        REACT_APP_SOCKET_URL: ""
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
